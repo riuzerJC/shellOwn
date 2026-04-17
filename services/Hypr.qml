@@ -82,7 +82,7 @@ Singleton {
         if (!token || !normalizedAddress)
             return false;
 
-        dispatch(`movetoworkspace ${token},address:0x${normalizedAddress}`);
+        dispatch(`movetoworkspacesilent ${token},address:0x${normalizedAddress}`);
         return true;
     }
 

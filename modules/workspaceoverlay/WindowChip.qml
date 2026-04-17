@@ -13,7 +13,7 @@ StyledRect {
 
     required property var window
     required property string sourceToken
-    required property string monitorName
+    property string monitorName: ""
     required property var onDragCommit
 
     readonly property string address: window?.address ?? ""
@@ -32,12 +32,12 @@ StyledRect {
     property real dragY: 0
 
     radius: Tokens.rounding.small
-    color: dragHandler.active ? Qt.rgba(0.4, 0.6, 1, 0.28) : Qt.rgba(0.17, 0.17, 0.22, 0.96)
+    color: dragHandler.active ? Colours.tPalette.m3secondaryContainer : Colours.tPalette.m3surfaceContainerHigh
     border.width: 1
-    border.color: dragHandler.active ? Qt.rgba(0.65, 0.78, 1, 0.95) : Qt.rgba(1, 1, 1, 0.12)
+    border.color: dragHandler.active ? Colours.tPalette.m3secondary : Colours.tPalette.m3outlineVariant
 
-    implicitHeight: 74
-    implicitWidth: 112
+    implicitHeight: 58
+    implicitWidth: 96
 
     Drag.active: dragHandler.active
     Drag.source: root
@@ -48,10 +48,12 @@ StyledRect {
     x: dragHandler.active ? dragX : 0
     y: dragHandler.active ? dragY : 0
     z: dragHandler.active ? 20 : 1
-    scale: dragHandler.active ? 0.96 : 1
+    scale: dragHandler.active ? 0.94 : 1
 
     Behavior on scale {
-        Anim {}
+        Anim {
+            type: Anim.Standard
+        }
     }
 
     ScreencopyView {
@@ -68,9 +70,9 @@ StyledRect {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.margins: 1
-        height: 22
+        height: 18
         radius: root.radius - 1
-        color: Qt.rgba(0, 0, 0, 0.45)
+        color: Qt.rgba(0, 0, 0, 0.5)
 
         StyledText {
             anchors.verticalCenter: parent.verticalCenter
@@ -80,7 +82,7 @@ StyledRect {
             anchors.rightMargin: Tokens.padding.small
             text: root.window?.lastIpcObject?.class || root.window?.title || qsTr("Window")
             elide: Text.ElideRight
-            font.pointSize: Tokens.font.size.small
+            font.pointSize: Tokens.font.size.smaller
             color: Qt.rgba(1, 1, 1, 0.9)
         }
     }
