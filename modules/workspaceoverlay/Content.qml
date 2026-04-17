@@ -46,6 +46,19 @@ StyledRect {
             };
         })
     readonly property int specialShownCount: 5
+    readonly property var defaultSpecialTargets: ["special:music", "special:chat", "special:term", "special:files", "special:misc"]
+    readonly property var specialPreferredNames: {
+        const configured = Config.workspaceOverlay?.specialTargets;
+        if (Array.isArray(configured) && configured.length > 0) {
+            return configured.map(name => {
+                const normalized = String(name ?? "").trim();
+                if (!normalized)
+                    return "";
+                return normalized.startsWith("special:") ? normalized : `special:${normalized}`;
+            }).filter(Boolean);
+        }
+        return defaultSpecialTargets;
+    }
     readonly property var specialWorkspaceByName: {
         const map = ({});
         for (const ws of workspaceGroups.special) {
@@ -57,7 +70,11 @@ StyledRect {
     }
     readonly property var specialWorkspaceNames: {
         const existing = Object.keys(specialWorkspaceByName).sort((a, b) => a.localeCompare(b));
-        const names = [...existing];
+        const names = [...specialPreferredNames];
+        for (const name of existing) {
+            if (!names.includes(name))
+                names.push(name);
+        }
         for (let i = 1; names.length < specialShownCount; i++) {
             const candidate = `special:slot${i}`;
             if (!specialWorkspaceByName[candidate])
@@ -178,12 +195,13 @@ StyledRect {
             reconcileTimer.stop();
     }
 
-    color: Qt.rgba(0.03, 0.03, 0.06, 0.9)
+    // Glass test: keep root fully transparent so section glass is visible
+    color: "transparent"
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.08)
+    border.color: Qt.alpha(Colours.palette.m3outlineVariant, 0.35)
     radius: Tokens.rounding.large
     implicitWidth: Math.min(screen.width - Tokens.padding.large * 2, 1360)
-    implicitHeight: Math.min(screen.height - Tokens.padding.large * 2, 900)
+    implicitHeight: Math.min(screen.height - Tokens.padding.large * 2, layoutRoot.implicitHeight + Tokens.padding.normal * 2)
 
     Component.onCompleted: Hypr.forceRefreshState()
 
@@ -197,36 +215,46 @@ StyledRect {
     }
 
     ColumnLayout {
+        id: layoutRoot
+
         anchors.fill: parent
-        anchors.margins: Tokens.padding.large
-        spacing: Tokens.spacing.large
+        anchors.margins: Tokens.padding.normal
+        anchors.topMargin: 10
+        spacing: 6
 
         StyledRect {
+            id: normalContainer
+
             Layout.fillWidth: true
-            Layout.preferredHeight: normalSection.implicitHeight + Tokens.padding.large * 2
+            Layout.preferredHeight: normalSection.implicitHeight + 8
 
             radius: Tokens.rounding.large
-            color: Qt.rgba(0.08, 0.08, 0.12, 0.95)
+            color: Colours.tPalette.m3surfaceContainerHigh
             border.width: 1
-            border.color: Qt.rgba(1, 1, 1, 0.1)
+            border.color: Colours.tPalette.m3outlineVariant
 
             ColumnLayout {
                 id: normalSection
 
                 anchors.fill: parent
-                anchors.margins: Tokens.padding.large
-                spacing: Tokens.spacing.normal
+                anchors.margins: Tokens.padding.normal
+                anchors.topMargin: 2
+                spacing: Tokens.spacing.small
 
                 StyledText {
                     text: qsTr("Workspaces")
-                    font.pointSize: Tokens.font.size.xLarge
+                    font.pointSize: Tokens.font.size.normal
+                    font.weight: 600
+                    color: Colours.tPalette.m3onSurface
+                    Layout.leftMargin: 6
+                    Layout.topMargin: 10
                 }
 
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 5
-                    columnSpacing: Tokens.spacing.normal
-                    rowSpacing: Tokens.spacing.normal
+                    columnSpacing: 6
+                    rowSpacing: 6
 
                     Repeater {
                         model: root.normalWorkspaces.slice(0, 10)
@@ -234,8 +262,8 @@ StyledRect {
                         WorkspaceTarget {
                             required property var modelData
 
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
+                            Layout.preferredWidth: 259
+                            Layout.preferredHeight: 170
                             workspace: modelData
                             kind: "normal"
                             windows: root.windowsByWorkspace[String(modelData.id)] ?? []
@@ -254,31 +282,39 @@ StyledRect {
         }
 
         StyledRect {
+            id: specialContainer
+
             Layout.fillWidth: true
-            Layout.preferredHeight: specialSection.implicitHeight + Tokens.padding.large * 2
+            Layout.preferredHeight: specialSection.implicitHeight + 8
 
             radius: Tokens.rounding.large
-            color: Qt.rgba(0.08, 0.08, 0.12, 0.95)
+            // Glass look relies on compositor blur + low-alpha surface
+            color: Qt.alpha(Colours.palette.m3surfaceContainerHigh, 0.42)
             border.width: 1
-            border.color: Qt.rgba(1, 1, 1, 0.1)
+            border.color: Qt.alpha(Colours.palette.m3outlineVariant, 0.65)
 
             ColumnLayout {
                 id: specialSection
 
                 anchors.fill: parent
-                anchors.margins: Tokens.padding.large
-                spacing: Tokens.spacing.normal
+                anchors.margins: Tokens.padding.normal
+                anchors.topMargin: 2
+                spacing: Tokens.spacing.small
 
                 StyledText {
                     text: qsTr("Special workspaces")
-                    font.pointSize: Tokens.font.size.xLarge
+                    font.pointSize: Tokens.font.size.normal
+                    font.weight: 600
+                    color: Colours.tPalette.m3onSurface
+                    Layout.leftMargin: 6
+                    Layout.topMargin: 10
                 }
 
                 GridLayout {
                     Layout.fillWidth: true
                     columns: 5
-                    columnSpacing: Tokens.spacing.normal
-                    rowSpacing: Tokens.spacing.normal
+                    columnSpacing: 6
+                    rowSpacing: 6
 
                     Repeater {
                         model: root.specialWorkspaces.slice(0, 5)
@@ -286,8 +322,8 @@ StyledRect {
                         WorkspaceTarget {
                             required property var modelData
 
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
+                            Layout.preferredWidth: 259
+                            Layout.preferredHeight: 170
                             workspace: modelData
                             kind: "special"
                             windows: root.windowsByWorkspace[modelData.name] ?? []
