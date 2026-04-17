@@ -45,6 +45,53 @@ Singleton {
         Hyprland.dispatch(request);
     }
 
+    function workspaceTargetToken(target: var): string {
+        if (!target)
+            return "";
+
+        const kind = target.kind;
+        if (kind === "normal") {
+            const id = Number(target.id);
+            if (!Number.isInteger(id) || id < 1)
+                return "";
+            return String(id);
+        }
+
+        if (kind === "special") {
+            const name = String(target.name ?? "").trim();
+            if (!name)
+                return "";
+            return name.startsWith("special:") ? name : `special:${name}`;
+        }
+
+        return "";
+    }
+
+    function normalizeWindowAddress(address: string): string {
+        if (!address)
+            return "";
+
+        const cleaned = String(address).trim().toLowerCase().replace(/^0x/, "");
+        return /^[0-9a-f]+$/.test(cleaned) ? cleaned : "";
+    }
+
+    function moveWindowToWorkspace(address: string, target: var): bool {
+        const token = workspaceTargetToken(target);
+        const normalizedAddress = normalizeWindowAddress(address);
+
+        if (!token || !normalizedAddress)
+            return false;
+
+        dispatch(`movetoworkspacesilent ${token},address:0x${normalizedAddress}`);
+        return true;
+    }
+
+    function forceRefreshState(): void {
+        Hyprland.refreshToplevels();
+        Hyprland.refreshWorkspaces();
+        Hyprland.refreshMonitors();
+    }
+
     function cycleSpecialWorkspace(direction: string): void {
         const openSpecials = workspaces.values.filter(w => w.name.startsWith("special:") && w.lastIpcObject.windows > 0);
 

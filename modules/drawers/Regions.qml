@@ -28,6 +28,12 @@ Region {
     }
 
     R {
+        panel: root.panels.workspaceOverlay
+        y: 0
+        height: panel.height * (1 - root.panels.workspaceOverlay.offsetScale) + root.borderThickness
+    }
+
+    R {
         panel: root.panels.launcher
         y: root.win.height - height
         height: panel.height * (1 - root.panels.launcher.offsetScale) + root.borderThickness

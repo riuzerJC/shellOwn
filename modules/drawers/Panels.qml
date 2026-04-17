@@ -10,6 +10,7 @@ import qs.modules.osd as Osd
 import qs.modules.session as Session
 import qs.modules.sidebar as Sidebar
 import qs.modules.utilities as Utilities
+import qs.modules.workspaceoverlay as WorkspaceOverlay
 import qs.modules.bar.popouts as BarPopouts
 import qs.modules.utilities.toasts as Toasts
 
@@ -33,6 +34,7 @@ Item {
     readonly property alias utilities: utilities
     readonly property alias toasts: toasts
     readonly property alias sidebar: sidebar
+    readonly property alias workspaceOverlay: workspaceOverlay
 
     anchors.fill: parent
     anchors.margins: borderThickness
@@ -113,6 +115,17 @@ Item {
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
+    }
+
+    WorkspaceOverlay.Wrapper {
+        id: workspaceOverlay
+
+        screen: root.screen
+        visibilities: root.visibilities
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: Tokens.padding.large
     }
 
     BarPopouts.ClipWrapper {

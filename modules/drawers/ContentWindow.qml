@@ -49,16 +49,23 @@ StyledWindow {
         return Math.max(...thresholds);
     }
 
+    readonly property bool workspaceOverlayEnabled: {
+        const cfg = contentItem.Config.workspaceOverlay;
+        return cfg ? cfg.enabled !== false : true;
+    }
+
     onHasFullscreenChanged: {
         visibilities.launcher = false;
         visibilities.session = false;
         visibilities.dashboard = false;
+        if (hasFullscreen)
+            visibilities.workspaceOverlay = false;
     }
 
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || panels.dashboard.needsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || panels.dashboard.needsKeyboard || (visibilities.workspaceOverlay && workspaceOverlayEnabled) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: Regions {
         bar: bar
@@ -92,13 +99,14 @@ StyledWindow {
     HyprlandFocusGrab {
         id: focusGrab
 
-        active: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
+        active: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (visibilities.workspaceOverlay && workspaceOverlayEnabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
         windows: [root]
         onCleared: {
             visibilities.launcher = false;
             visibilities.session = false;
             visibilities.sidebar = false;
             visibilities.dashboard = false;
+            visibilities.workspaceOverlay = false;
             panels.popouts.hasCurrent = false;
             bar.closeTray();
         }
@@ -135,6 +143,13 @@ StyledWindow {
             }
         }
 
+        BlobGroup {
+            id: overlayTransparentGroup
+
+            color: "transparent"
+            smoothing: root.contentItem.Config.border.smoothing
+        }
+
         BlobInvertedRect {
             anchors.fill: parent
             anchors.margins: -50 // Make border thicker to smooth out bulge from closed drawers
@@ -158,6 +173,14 @@ StyledWindow {
 
             panel: panels.launcher
             deformAmount: 0.1
+        }
+
+        PanelBg {
+            id: workspaceOverlayBg
+
+            panel: panels.workspaceOverlay
+            deformAmount: 0.08
+            panelGroup: overlayTransparentGroup
         }
 
         PanelBg {
@@ -225,7 +248,10 @@ StyledWindow {
     DrawerVisibilities {
         id: visibilities
 
-        Component.onCompleted: Visibilities.load(root.screen, this)
+        Component.onCompleted: {
+            Visibilities.load(root.screen, this);
+            workspaceOverlay = false;
+        }
     }
 
     Interactions {
@@ -253,6 +279,9 @@ StyledWindow {
             }
             launcher.transform: Matrix4x4 {
                 matrix: launcherBg.deformMatrix
+            }
+            workspaceOverlay.transform: Matrix4x4 {
+                matrix: workspaceOverlayBg.deformMatrix
             }
             session.transform: Matrix4x4 {
                 matrix: sessionBg.deformMatrix
@@ -293,8 +322,9 @@ StyledWindow {
     component PanelBg: BlobRect {
         required property Item panel
         property real deformAmount: 0.15
+        property BlobGroup panelGroup: blobGroup
 
-        group: blobGroup
+        group: panelGroup
         x: panel.x + bar.implicitWidth
         y: panel.y + root.borderThickness
         implicitWidth: panel.width
