@@ -30,25 +30,32 @@ StyledRect {
             return dropActive;
         return payload.sourceToken !== targetToken;
     }
-    readonly property bool compactSpecial: isSpecial
+    readonly property color idleColor: isSpecial ? Qt.alpha(Colours.palette.m3surfaceContainer, 0.46) : Colours.tPalette.m3surfaceContainer
+    readonly property color idleBorderColor: isSpecial ? Qt.alpha(Colours.palette.m3outlineVariant, 0.72) : Colours.tPalette.m3outlineVariant
+    readonly property color previewBgColor: isSpecial ? Qt.alpha(Colours.palette.m3surfaceContainerLow, 0.5) : Colours.tPalette.m3surfaceContainerLow
+    readonly property color previewBorderColor: isSpecial ? Qt.alpha(Colours.palette.m3outlineVariant, 0.64) : Colours.tPalette.m3outlineVariant
+    // end-4 parity: both normal and special tiles share size
+    readonly property int tileWidth: 244
+    readonly property int tileHeight: 170
+    readonly property int previewHeight: 124
 
     radius: Tokens.rounding.normal
-    color: dropActive ? (canDrop ? Qt.rgba(0.4, 0.6, 1, 0.22) : Qt.rgba(1, 0.3, 0.3, 0.24)) : Qt.rgba(0.14, 0.14, 0.18, 0.96)
+    color: dropActive ? (canDrop ? Colours.tPalette.m3secondaryContainer : Colours.tPalette.m3errorContainer) : idleColor
     border.width: 1
-    border.color: dropActive ? (canDrop ? Qt.rgba(0.6, 0.75, 1, 0.95) : Qt.rgba(1, 0.45, 0.45, 0.95)) : Qt.rgba(1, 1, 1, 0.12)
+    border.color: dropActive ? (canDrop ? Colours.tPalette.m3secondary : Colours.tPalette.m3error) : idleBorderColor
     clip: true
 
     readonly property int previewColumns: 3
     readonly property int previewRows: 2
     readonly property int previewCapacity: previewColumns * previewRows
 
-    implicitHeight: compactSpecial ? 120 : 174
-    implicitWidth: compactSpecial ? 220 : 248
+    implicitHeight: tileHeight
+    implicitWidth: tileWidth
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: Tokens.spacing.small
+        anchors.margins: 8
+        spacing: 4
 
         RowLayout {
             id: header
@@ -59,11 +66,13 @@ StyledRect {
                 Layout.fillWidth: true
                 text: root.isSpecial ? root.wsName : qsTr("Workspace %1").arg(root.wsId)
                 font.pointSize: Tokens.font.size.normal
+                font.weight: 600
+                color: Colours.tPalette.m3onSurface
             }
 
             StyledText {
                 text: qsTr("%1 windows").arg(root.windows.length)
-                color: Qt.rgba(1, 1, 1, 0.72)
+                color: Colours.tPalette.m3onSurfaceVariant
                 font.pointSize: Tokens.font.size.small
             }
         }
@@ -72,21 +81,21 @@ StyledRect {
             id: previewFrame
 
             Layout.fillWidth: true
-            Layout.preferredHeight: compactSpecial ? 70 : 106
+            Layout.preferredHeight: root.previewHeight
 
             StyledRect {
                 anchors.fill: parent
                 radius: Tokens.rounding.small
-                color: Qt.rgba(0.08, 0.08, 0.12, 0.9)
+                color: previewBgColor
                 border.width: 1
-                border.color: Qt.rgba(1, 1, 1, 0.08)
+                border.color: previewBorderColor
 
                 GridLayout {
                     anchors.fill: parent
-                    anchors.margins: 6
+                    anchors.margins: 4
                     columns: root.previewColumns
-                    columnSpacing: 6
-                    rowSpacing: 6
+                    columnSpacing: 4
+                    rowSpacing: 4
 
                     Repeater {
                         model: Math.min(root.windows.length, root.previewCapacity)
@@ -98,7 +107,7 @@ StyledRect {
                             Layout.fillHeight: true
                             window: root.windows[index]
                             sourceToken: root.targetToken
-                            monitorName: root.workspace?.monitor?.name ?? ""
+                            monitorName: ""
                             onDragCommit: payload => root.onDragCommit(payload, root.hoveredTarget)
                         }
                     }
@@ -107,8 +116,8 @@ StyledRect {
                 StyledText {
                     anchors.centerIn: parent
                     visible: root.windows.length === 0
-                    text: root.isSpecial ? qsTr("Empty") : qsTr("Drop window here")
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    text: qsTr("Drop window here")
+                    color: Colours.tPalette.m3onSurfaceVariant
                     font.pointSize: Tokens.font.size.small
                 }
             }
@@ -122,7 +131,7 @@ StyledRect {
 
                 visible: root.inFlightByAddress[modelData]?.targetToken === root.targetToken
                 text: qsTr("Moving 0x%1…").arg(modelData)
-                color: Qt.rgba(1, 1, 1, 0.62)
+                color: Colours.tPalette.m3onSurfaceVariant
                 font.pointSize: Tokens.font.size.small
             }
         }
