@@ -33,12 +33,21 @@ StyledRect {
     property real dragY: 0
 
     radius: Tokens.rounding.small
+<<<<<<< HEAD
     color: dragHandler.active ? Colours.tPalette.m3secondaryContainer : Colours.tPalette.m3surfaceContainerHigh
     border.width: 1
     border.color: dragHandler.active ? Colours.tPalette.m3secondary : Colours.tPalette.m3outlineVariant
 
     implicitHeight: 58
     implicitWidth: 96
+=======
+    color: dragHandler.active ? Qt.rgba(0.4, 0.6, 1, 0.28) : Qt.rgba(0.17, 0.17, 0.22, 0.96)
+    border.width: 1
+    border.color: dragHandler.active ? Qt.rgba(0.65, 0.78, 1, 0.95) : Qt.rgba(1, 1, 1, 0.12)
+
+    implicitHeight: 74
+    implicitWidth: 112
+>>>>>>> 372bdb2c (feat: refactor workspace overlay into preview tile grids)
 
     Drag.active: dragHandler.active
     Drag.source: root
@@ -71,9 +80,15 @@ StyledRect {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.margins: 1
+<<<<<<< HEAD
         height: 18
         radius: root.radius - 1
         color: Qt.rgba(0, 0, 0, 0.5)
+=======
+        height: 22
+        radius: root.radius - 1
+        color: Qt.rgba(0, 0, 0, 0.45)
+>>>>>>> 372bdb2c (feat: refactor workspace overlay into preview tile grids)
 
         StyledText {
             anchors.verticalCenter: parent.verticalCenter
@@ -83,7 +98,11 @@ StyledRect {
             anchors.rightMargin: Tokens.padding.small
             text: root.window?.lastIpcObject?.class || root.window?.title || qsTr("Window")
             elide: Text.ElideRight
+<<<<<<< HEAD
             font.pointSize: Tokens.font.size.smaller
+=======
+            font.pointSize: Tokens.font.size.small
+>>>>>>> 372bdb2c (feat: refactor workspace overlay into preview tile grids)
             color: Qt.rgba(1, 1, 1, 0.9)
         }
     }
