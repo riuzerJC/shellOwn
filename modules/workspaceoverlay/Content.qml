@@ -46,6 +46,7 @@ StyledRect {
             };
         })
     readonly property int specialShownCount: 5
+<<<<<<< HEAD
     readonly property var defaultSpecialTargets: ["special:music", "special:chat", "special:term", "special:files", "special:misc"]
     readonly property var specialPreferredNames: {
         const configured = Config.workspaceOverlay?.specialTargets;
@@ -59,6 +60,8 @@ StyledRect {
         }
         return defaultSpecialTargets;
     }
+=======
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
     readonly property var specialWorkspaceByName: {
         const map = ({});
         for (const ws of workspaceGroups.special) {
@@ -70,11 +73,15 @@ StyledRect {
     }
     readonly property var specialWorkspaceNames: {
         const existing = Object.keys(specialWorkspaceByName).sort((a, b) => a.localeCompare(b));
+<<<<<<< HEAD
         const names = [...specialPreferredNames];
         for (const name of existing) {
             if (!names.includes(name))
                 names.push(name);
         }
+=======
+        const names = [...existing];
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
         for (let i = 1; names.length < specialShownCount; i++) {
             const candidate = `special:slot${i}`;
             if (!specialWorkspaceByName[candidate])
@@ -195,6 +202,7 @@ StyledRect {
             reconcileTimer.stop();
     }
 
+<<<<<<< HEAD
     // Glass test: keep root fully transparent so section glass is visible
     color: "transparent"
     border.width: 1
@@ -202,6 +210,12 @@ StyledRect {
     radius: Tokens.rounding.large
     implicitWidth: Math.min(screen.width - Tokens.padding.large * 2, 1360)
     implicitHeight: Math.min(screen.height - Tokens.padding.large * 2, layoutRoot.implicitHeight + Tokens.padding.normal * 2)
+=======
+    color: Colours.tPalette.m3surfaceContainerLowest
+    radius: Tokens.rounding.large
+    implicitWidth: Math.min(screen.width - Tokens.padding.large * 2, 1140)
+    implicitHeight: Math.min(screen.height - Tokens.padding.large * 2, 760)
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
 
     Component.onCompleted: Hypr.forceRefreshState()
 
@@ -214,6 +228,7 @@ StyledRect {
         onTriggered: root.reconcileInFlight()
     }
 
+<<<<<<< HEAD
     ColumnLayout {
         id: layoutRoot
 
@@ -258,12 +273,50 @@ StyledRect {
 
                     Repeater {
                         model: root.normalWorkspaces.slice(0, 10)
+=======
+    RowLayout {
+        anchors.fill: parent
+        anchors.margins: Tokens.padding.large
+        spacing: Tokens.spacing.large
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            StyledText {
+                text: qsTr("Workspaces")
+                font.pointSize: Tokens.font.size.xLarge
+            }
+
+            Flickable {
+                id: normalFlick
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+
+                contentWidth: width
+                contentHeight: normalColumn.implicitHeight
+
+                Column {
+                    id: normalColumn
+
+                    width: normalFlick.width
+                    spacing: Tokens.spacing.normal
+
+                    Repeater {
+                        model: root.normalWorkspaces
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
 
                         WorkspaceTarget {
                             required property var modelData
 
+<<<<<<< HEAD
                             Layout.preferredWidth: 259
                             Layout.preferredHeight: 170
+=======
+                            width: normalColumn.width
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
                             workspace: modelData
                             kind: "normal"
                             windows: root.windowsByWorkspace[String(modelData.id)] ?? []
@@ -278,6 +331,7 @@ StyledRect {
                         }
                     }
                 }
+<<<<<<< HEAD
             }
         }
 
@@ -318,12 +372,55 @@ StyledRect {
 
                     Repeater {
                         model: root.specialWorkspaces.slice(0, 5)
+=======
+
+                StyledText {
+                    anchors.centerIn: parent
+                    visible: root.normalWorkspaces.length === 0
+                    text: qsTr("No workspaces available")
+                    color: Colours.palette.m3onSurfaceVariant
+                }
+            }
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            StyledText {
+                text: qsTr("Special workspaces")
+                font.pointSize: Tokens.font.size.xLarge
+            }
+
+            Flickable {
+                id: specialFlick
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+
+                contentWidth: width
+                contentHeight: specialColumn.implicitHeight
+
+                Column {
+                    id: specialColumn
+
+                    width: specialFlick.width
+                    spacing: Tokens.spacing.normal
+
+                    Repeater {
+                        model: root.specialWorkspaces
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
 
                         WorkspaceTarget {
                             required property var modelData
 
+<<<<<<< HEAD
                             Layout.preferredWidth: 259
                             Layout.preferredHeight: 170
+=======
+                            width: specialColumn.width
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
                             workspace: modelData
                             kind: "special"
                             windows: root.windowsByWorkspace[modelData.name] ?? []
@@ -338,6 +435,16 @@ StyledRect {
                         }
                     }
                 }
+<<<<<<< HEAD
+=======
+
+                StyledText {
+                    anchors.centerIn: parent
+                    visible: root.specialWorkspaces.length === 0
+                    text: qsTr("No special workspaces")
+                    color: Colours.palette.m3onSurfaceVariant
+                }
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
             }
         }
     }

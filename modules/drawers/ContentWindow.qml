@@ -196,7 +196,10 @@ StyledWindow {
 
             panel: panels.workspaceOverlay
             deformAmount: 0.08
+<<<<<<< HEAD
             panelGroup: overlayTransparentGroup
+=======
+>>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
         }
 
         PanelBg {
