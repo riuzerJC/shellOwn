@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Wayland
 import Caelestia.Config
 import qs.components
 import qs.services
@@ -30,18 +31,18 @@ StyledRect {
     property real dragX: 0
     property real dragY: 0
 
-    radius: Tokens.rounding.large
-    color: dragHandler.active ? Colours.tPalette.m3secondaryContainer : Colours.tPalette.m3surfaceContainerHigh
-    border.width: 2
-    border.color: Colours.tPalette.m3outlineVariant
+    radius: Tokens.rounding.small
+    color: dragHandler.active ? Qt.rgba(0.4, 0.6, 1, 0.28) : Qt.rgba(0.17, 0.17, 0.22, 0.96)
+    border.width: 1
+    border.color: dragHandler.active ? Qt.rgba(0.65, 0.78, 1, 0.95) : Qt.rgba(1, 1, 1, 0.12)
 
-    implicitHeight: content.implicitHeight + Tokens.padding.large * 2
-    implicitWidth: Math.max(240, content.implicitWidth + Tokens.padding.normal * 2)
+    implicitHeight: 74
+    implicitWidth: 112
 
     Drag.active: dragHandler.active
     Drag.source: root
-    Drag.hotSpot.x: dragHandler.centroid.position.x
-    Drag.hotSpot.y: dragHandler.centroid.position.y
+    Drag.hotSpot.x: width / 2
+    Drag.hotSpot.y: height / 2
     Drag.keys: ["workspace-overlay-window"]
 
     x: dragHandler.active ? dragX : 0
@@ -53,28 +54,45 @@ StyledRect {
         Anim {}
     }
 
-    Row {
-        id: content
+    ScreencopyView {
+        id: preview
 
-        anchors.verticalCenter: parent.verticalCenter
+        anchors.fill: parent
+        anchors.margins: 1
+        captureSource: root.window?.wayland ?? root.window ?? null
+        live: true
+    }
+
+    Rectangle {
         anchors.left: parent.left
-        anchors.leftMargin: Tokens.padding.large
         anchors.right: parent.right
-        anchors.rightMargin: Tokens.padding.large
-        spacing: Tokens.spacing.normal
-
-        MaterialIcon {
-            anchors.verticalCenter: parent.verticalCenter
-            text: Icons.getAppCategoryIcon(root.window?.lastIpcObject?.class, "terminal")
-            color: Colours.palette.m3onSurfaceVariant
-        }
+        anchors.bottom: parent.bottom
+        anchors.margins: 1
+        height: 22
+        radius: root.radius - 1
+        color: Qt.rgba(0, 0, 0, 0.45)
 
         StyledText {
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - x
-            text: root.window?.title || root.window?.lastIpcObject?.class || qsTr("Unknown window")
+            anchors.left: parent.left
+            anchors.leftMargin: Tokens.padding.small
+            anchors.right: parent.right
+            anchors.rightMargin: Tokens.padding.small
+            text: root.window?.lastIpcObject?.class || root.window?.title || qsTr("Window")
             elide: Text.ElideRight
-            font.pointSize: Tokens.font.size.normal
+            font.pointSize: Tokens.font.size.small
+            color: Qt.rgba(1, 1, 1, 0.9)
+        }
+    }
+
+    Loader {
+        anchors.centerIn: parent
+        active: !root.window
+
+        sourceComponent: MaterialIcon {
+            text: "web_asset_off"
+            color: Qt.rgba(1, 1, 1, 0.45)
+            font.pointSize: Tokens.font.size.large
         }
     }
 
