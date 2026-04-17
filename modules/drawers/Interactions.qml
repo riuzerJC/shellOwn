@@ -23,6 +23,8 @@ CustomMouseArea {
     property bool osdShortcutActive
     property bool utilitiesShortcutActive
 
+    readonly property bool overlayActive: visibilities.workspaceOverlay && (Config.workspaceOverlay?.enabled !== false)
+
     function withinPanelHeight(panel: Item, x: real, y: real): bool {
         const panelY = root.borderThickness + panel.y;
         return y >= panelY - Config.border.rounding && y <= panelY + panel.height + Config.border.rounding;
@@ -78,6 +80,9 @@ CustomMouseArea {
             if (!utilitiesShortcutActive)
                 visibilities.utilities = false;
 
+            if (!overlayActive)
+                visibilities.workspaceOverlay = false;
+
             if (!popouts.currentName.startsWith("traymenu") || ((popouts.current as StackView)?.depth ?? 0) <= 1) {
                 popouts.hasCurrent = false;
                 bar.closeTray();
@@ -89,6 +94,9 @@ CustomMouseArea {
     }
 
     onPositionChanged: event => {
+        if (overlayActive)
+            return;
+
         if (popouts.isDetached)
             return;
 

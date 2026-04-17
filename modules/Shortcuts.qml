@@ -12,6 +12,13 @@ Scope {
     property bool launcherInterrupted
     readonly property bool hasFullscreen: Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
 
+    function canToggle(drawer: string): bool {
+        if (!root.hasFullscreen)
+            return true;
+
+        return !["launcher", "session", "dashboard", "workspaceOverlay"].includes(drawer);
+    }
+
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
@@ -108,10 +115,24 @@ Scope {
         }
     }
 
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "workspaceOverlay"
+        description: "Toggle workspace overlay"
+        onPressed: {
+            if (!root.canToggle("workspaceOverlay"))
+                return;
+
+            const visibilities = Visibilities.getForActive();
+            visibilities.workspaceOverlay = !visibilities.workspaceOverlay;
+        }
+    }
+
     IpcHandler {
         function toggle(drawer: string): void {
             if (list().split("\n").includes(drawer)) {
-                if (root.hasFullscreen && ["launcher", "session", "dashboard"].includes(drawer))
+                if (!root.canToggle(drawer))
                     return;
                 const visibilities = Visibilities.getForActive();
                 visibilities[drawer] = !visibilities[drawer];
