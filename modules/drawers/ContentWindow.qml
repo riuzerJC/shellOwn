@@ -58,17 +58,24 @@ StyledWindow {
         return Math.max(...thresholds);
     }
 
+    readonly property bool workspaceOverlayEnabled: {
+        const cfg = contentItem.Config.workspaceOverlay;
+        return cfg ? cfg.enabled !== false : true;
+    }
+
     onHasFullscreenChanged: {
         screenState.launcher = false;
         screenState.session = false;
         screenState.dashboard = false;
         panels.popouts.close();
+        if (hasFullscreen)
+            screenState.workspaceOverlay = false;
     }
 
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: (fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen) || (hasSpecialWorkspace && hasFullscreenOnNormalWs) ? WlrLayer.Overlay : WlrLayer.Top
-    WlrLayershell.keyboardFocus: screenState.launcher || screenState.session ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: screenState.launcher || screenState.session || (screenState.workspaceOverlay && workspaceOverlayEnabled) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 
@@ -119,6 +126,8 @@ StyledWindow {
                 return true;
             if (!conf.dashboard.showOnHover && s.dashboard && conf.dashboard.enabled)
                 return true;
+            if (s.workspaceOverlay && workspaceOverlayEnabled)
+                return true;
             if (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
                 return true;
             return false;
@@ -129,6 +138,7 @@ StyledWindow {
             root.screenState.session = false;
             root.screenState.sidebar = false;
             root.screenState.dashboard = false;
+            root.screenState.workspaceOverlay = false;
             panels.popouts.hasCurrent = false;
             bar.closeTray();
         }
@@ -186,6 +196,13 @@ StyledWindow {
 
             panel: panels.launcher
             deformAmount: 0.1
+        }
+
+        PanelBg {
+            id: workspaceOverlayBg
+
+            panel: panels.workspaceOverlay
+            deformAmount: 0.08
         }
 
         PanelBg {
@@ -275,6 +292,9 @@ StyledWindow {
             }
             launcher.transform: Matrix4x4 {
                 matrix: launcherBg.deformMatrix
+            }
+            workspaceOverlay.transform: Matrix4x4 {
+                matrix: workspaceOverlayBg.deformMatrix
             }
             session.transform: Matrix4x4 {
                 matrix: sessionBg.deformMatrix
