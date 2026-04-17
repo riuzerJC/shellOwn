@@ -166,6 +166,13 @@ StyledWindow {
             smoothing: root.contentItem.Config.border.smoothing
         }
 
+        BlobGroup {
+            id: overlayTransparentGroup
+
+            color: "transparent"
+            smoothing: root.contentItem.Config.border.smoothing
+        }
+
         BlobInvertedRect {
             anchors.fill: parent
             anchors.margins: -50 // Make border thicker to smooth out bulge from closed drawers
@@ -196,10 +203,7 @@ StyledWindow {
 
             panel: panels.workspaceOverlay
             deformAmount: 0.08
-<<<<<<< HEAD
             panelGroup: overlayTransparentGroup
-=======
->>>>>>> 876d9014 (feat: add workspace overlay with workspace drag-and-drop)
         }
 
         PanelBg {
