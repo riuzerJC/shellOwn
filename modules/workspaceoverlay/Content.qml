@@ -178,10 +178,12 @@ StyledRect {
             reconcileTimer.stop();
     }
 
-    color: Colours.tPalette.m3surfaceContainerLowest
+    color: Qt.rgba(0.03, 0.03, 0.06, 0.9)
+    border.width: 1
+    border.color: Qt.rgba(1, 1, 1, 0.08)
     radius: Tokens.rounding.large
-    implicitWidth: Math.min(screen.width - Tokens.padding.large * 2, 1140)
-    implicitHeight: Math.min(screen.height - Tokens.padding.large * 2, 760)
+    implicitWidth: Math.min(screen.width - Tokens.padding.large * 2, 1360)
+    implicitHeight: Math.min(screen.height - Tokens.padding.large * 2, 900)
 
     Component.onCompleted: Hypr.forceRefreshState()
 
@@ -194,43 +196,46 @@ StyledRect {
         onTriggered: root.reconcileInFlight()
     }
 
-    RowLayout {
+    ColumnLayout {
         anchors.fill: parent
         anchors.margins: Tokens.padding.large
         spacing: Tokens.spacing.large
 
-        ColumnLayout {
+        StyledRect {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            Layout.preferredHeight: normalSection.implicitHeight + Tokens.padding.large * 2
 
-            StyledText {
-                text: qsTr("Workspaces")
-                font.pointSize: Tokens.font.size.xLarge
-            }
+            radius: Tokens.rounding.large
+            color: Qt.rgba(0.08, 0.08, 0.12, 0.95)
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.1)
 
-            Flickable {
-                id: normalFlick
+            ColumnLayout {
+                id: normalSection
 
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.large
+                spacing: Tokens.spacing.normal
 
-                contentWidth: width
-                contentHeight: normalColumn.implicitHeight
+                StyledText {
+                    text: qsTr("Workspaces")
+                    font.pointSize: Tokens.font.size.xLarge
+                }
 
-                Column {
-                    id: normalColumn
-
-                    width: normalFlick.width
-                    spacing: Tokens.spacing.normal
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 5
+                    columnSpacing: Tokens.spacing.normal
+                    rowSpacing: Tokens.spacing.normal
 
                     Repeater {
-                        model: root.normalWorkspaces
+                        model: root.normalWorkspaces.slice(0, 10)
 
                         WorkspaceTarget {
                             required property var modelData
 
-                            width: normalColumn.width
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
                             workspace: modelData
                             kind: "normal"
                             windows: root.windowsByWorkspace[String(modelData.id)] ?? []
@@ -245,48 +250,44 @@ StyledRect {
                         }
                     }
                 }
-
-                StyledText {
-                    anchors.centerIn: parent
-                    visible: root.normalWorkspaces.length === 0
-                    text: qsTr("No workspaces available")
-                    color: Colours.palette.m3onSurfaceVariant
-                }
             }
         }
 
-        ColumnLayout {
+        StyledRect {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            Layout.preferredHeight: specialSection.implicitHeight + Tokens.padding.large * 2
 
-            StyledText {
-                text: qsTr("Special workspaces")
-                font.pointSize: Tokens.font.size.xLarge
-            }
+            radius: Tokens.rounding.large
+            color: Qt.rgba(0.08, 0.08, 0.12, 0.95)
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.1)
 
-            Flickable {
-                id: specialFlick
+            ColumnLayout {
+                id: specialSection
 
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.large
+                spacing: Tokens.spacing.normal
 
-                contentWidth: width
-                contentHeight: specialColumn.implicitHeight
+                StyledText {
+                    text: qsTr("Special workspaces")
+                    font.pointSize: Tokens.font.size.xLarge
+                }
 
-                Column {
-                    id: specialColumn
-
-                    width: specialFlick.width
-                    spacing: Tokens.spacing.normal
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 5
+                    columnSpacing: Tokens.spacing.normal
+                    rowSpacing: Tokens.spacing.normal
 
                     Repeater {
-                        model: root.specialWorkspaces
+                        model: root.specialWorkspaces.slice(0, 5)
 
                         WorkspaceTarget {
                             required property var modelData
 
-                            width: specialColumn.width
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
                             workspace: modelData
                             kind: "special"
                             windows: root.windowsByWorkspace[modelData.name] ?? []
@@ -300,13 +301,6 @@ StyledRect {
                             onDragCommit: root.commitDraggedWindow
                         }
                     }
-                }
-
-                StyledText {
-                    anchors.centerIn: parent
-                    visible: root.specialWorkspaces.length === 0
-                    text: qsTr("No special workspaces")
-                    color: Colours.palette.m3onSurfaceVariant
                 }
             }
         }
