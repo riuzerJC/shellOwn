@@ -14,6 +14,7 @@ StyledRect {
     required property var window
     required property string sourceToken
     property string monitorName: ""
+    required property string monitorName
     required property var onDragCommit
 
     readonly property string address: window?.address ?? ""
