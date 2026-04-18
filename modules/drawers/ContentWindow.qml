@@ -63,6 +63,7 @@ StyledWindow {
 
     onHasFullscreenChanged: {
         visibilities.launcher = false;
+        visibilities.services = false;
         visibilities.session = false;
         visibilities.dashboard = false;
         panels.popouts.close();
@@ -117,10 +118,11 @@ StyledWindow {
     HyprlandFocusGrab {
         id: focusGrab
 
-        active: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (visibilities.workspaceOverlay && workspaceOverlayEnabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
+        active: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || visibilities.services || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (visibilities.workspaceOverlay && workspaceOverlayEnabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
         windows: [root]
         onCleared: {
             visibilities.launcher = false;
+            visibilities.services = false;
             visibilities.session = false;
             visibilities.sidebar = false;
             visibilities.dashboard = false;
@@ -195,6 +197,13 @@ StyledWindow {
             id: launcherBg
 
             panel: panels.launcher
+            deformAmount: 0.1
+        }
+
+        PanelBg {
+            id: servicesBg
+
+            panel: panels.services
             deformAmount: 0.1
         }
 
@@ -302,6 +311,9 @@ StyledWindow {
             }
             launcher.transform: Matrix4x4 {
                 matrix: launcherBg.deformMatrix
+            }
+            services.transform: Matrix4x4 {
+                matrix: servicesBg.deformMatrix
             }
             workspaceOverlay.transform: Matrix4x4 {
                 matrix: workspaceOverlayBg.deformMatrix
