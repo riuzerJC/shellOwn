@@ -1,0 +1,36 @@
+{
+  "mappings": [
+    {
+      "id": "docker",
+      "name": "Docker",
+      "description": "Container runtime daemon",
+      "icon": "deployed_code",
+      "adapter": "docker",
+      "enabled": true,
+      "capabilities": {
+        "start": true,
+        "stop": true
+      },
+      "params": {
+        "probeMode": "cli-only",
+        "startCommandPreference": ["systemctl"],
+        "stopCommandPreference": ["systemctl"]
+      }
+    },
+    {
+      "id": "network-manager",
+      "name": "NetworkManager",
+      "description": "Network service manager",
+      "icon": "network_check",
+      "adapter": "systemd",
+      "enabled": true,
+      "capabilities": {
+        "start": true,
+        "stop": true
+      },
+      "params": {
+        "unit": "NetworkManager.service"
+      }
+    }
+  ]
+}

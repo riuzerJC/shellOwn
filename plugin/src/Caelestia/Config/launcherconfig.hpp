@@ -17,6 +17,7 @@ class LauncherUseFuzzy : public ConfigObject {
     CONFIG_GLOBAL_PROPERTY(bool, apps, false)
     CONFIG_GLOBAL_PROPERTY(bool, actions, false)
     CONFIG_GLOBAL_PROPERTY(bool, schemes, false)
+    CONFIG_GLOBAL_PROPERTY(bool, services, false)
     CONFIG_GLOBAL_PROPERTY(bool, variants, false)
     CONFIG_GLOBAL_PROPERTY(bool, wallpapers, false)
 
@@ -125,6 +126,9 @@ class LauncherConfig : public ConfigObject {
                 { u"command"_s, QStringList{ u"caelestia"_s, u"shell"_s, u"controlCenter"_s, u"open"_s } },
             }),
         })
+    // Deprecated: use GlobalConfig.services.panelMappings instead.
+    // Kept for compatibility fallback during migration.
+    CONFIG_GLOBAL_PROPERTY(QVariantList, services)
 
 public:
     explicit LauncherConfig(QObject* parent = nullptr)

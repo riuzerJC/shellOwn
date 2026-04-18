@@ -5,6 +5,7 @@ import qs.components
 import qs.modules.bar as Bar
 import qs.modules.dashboard as Dashboard
 import qs.modules.launcher as Launcher
+import qs.modules.servicespanel as ServicesPanel
 import qs.modules.notifications as Notifications
 import qs.modules.osd as Osd
 import qs.modules.session as Session
@@ -28,6 +29,7 @@ Item {
     readonly property alias session: session
     readonly property alias sessionWrapper: sessionWrapper
     readonly property alias launcher: launcher
+    readonly property alias services: services
     readonly property alias dashboard: dashboard
     readonly property alias popouts: popoutsWrapper.content
     readonly property alias popoutsWrapper: popoutsWrapper
@@ -103,6 +105,15 @@ Item {
         screen: root.screen
         visibilities: root.visibilities
         panels: root
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+    }
+
+    ServicesPanel.Wrapper {
+        id: services
+
+        visibilities: root.visibilities
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
