@@ -65,6 +65,7 @@ StyledWindow {
 
     onHasFullscreenChanged: {
         screenState.launcher = false;
+        screenState.services = false;
         screenState.session = false;
         screenState.dashboard = false;
         panels.popouts.close();
@@ -122,7 +123,7 @@ StyledWindow {
         active: {
             const s = root.screenState;
             const conf = root.contentItem.Config;
-            if ((s.launcher && conf.launcher.enabled) || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled))
+            if ((s.launcher && conf.launcher.enabled) || s.services || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled))
                 return true;
             if (!conf.dashboard.showOnHover && s.dashboard && conf.dashboard.enabled)
                 return true;
@@ -135,6 +136,7 @@ StyledWindow {
         windows: [root]
         onCleared: {
             root.screenState.launcher = false;
+            root.screenState.services = false;
             root.screenState.session = false;
             root.screenState.sidebar = false;
             root.screenState.dashboard = false;
@@ -209,6 +211,13 @@ StyledWindow {
             id: launcherBg
 
             panel: panels.launcher
+            deformAmount: 0.1
+        }
+
+        PanelBg {
+            id: servicesBg
+
+            panel: panels.services
             deformAmount: 0.1
         }
 
@@ -307,6 +316,9 @@ StyledWindow {
             }
             launcher.transform: Matrix4x4 {
                 matrix: launcherBg.deformMatrix
+            }
+            services.transform: Matrix4x4 {
+                matrix: servicesBg.deformMatrix
             }
             workspaceOverlay.transform: Matrix4x4 {
                 matrix: workspaceOverlayBg.deformMatrix

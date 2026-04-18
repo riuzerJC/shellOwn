@@ -10,13 +10,13 @@
 
 </div>
 
-https://github.com/user-attachments/assets/0840f496-575c-4ca6-83a8-87bb01a85c5f
+<https://github.com/user-attachments/assets/0840f496-575c-4ca6-83a8-87bb01a85c5f>
 
 ## Components
 
--   Widgets: [`Quickshell`](https://quickshell.outfoxxed.me)
--   Window manager: [`Hyprland`](https://hypr.land)
--   Dots: [`caelestia`][dots-repo]
+- Widgets: [`Quickshell`](https://quickshell.outfoxxed.me)
+- Window manager: [`Hyprland`](https://hypr.land)
+- Dots: [`caelestia`][dots-repo]
 
 ## Installation
 
@@ -70,35 +70,35 @@ For home-manager, you can also use Caelestia's Home Manager module (explained in
 
 Dependencies:
 
--   [`caelestia-cli`](https://github.com/caelestia-dots/cli)
--   [`quickshell-git`](https://git.outfoxxed.me/quickshell/quickshell) - this has to be the git version, not the latest tagged version
--   `glibc`
--   `gcc-libs`
--   [`ddcutil`](https://github.com/rockowitz/ddcutil)
--   [`brightnessctl`](https://github.com/Hummer12007/brightnessctl)
--   [`libcava`](https://github.com/LukashonakV/cava)
--   [`networkmanager`](https://gitlab.freedesktop.org/NetworkManager/NetworkManager)
--   [`lm_sensors`](https://github.com/lm-sensors/lm-sensors)
--   [`aubio`](https://github.com/aubio/aubio)
--   [`libpipewire`](https://github.com/PipeWire/pipewire)
--   [`libqalculate`](https://github.com/Qalculate/libqalculate)
--   [`power-profiles-daemon`](https://gitlab.freedesktop.org/upower/power-profiles-daemon)
--   [`ttf-material-symbols-variable`](https://github.com/google/material-design-icons)
--   [`ttf-rubik-vf`](https://github.com/googlefonts/rubik)
--   [`ttf-cascadia-code-nerd`](https://github.com/ryanoasis/nerd-fonts)
--   `qt6-base`
--   `qt6-declarative`
--   `qt6-imageformats`
--   [`qt6-m3shapes-git`](https://github.com/soramanew/m3shapes)
--   [`swappy`](https://github.com/jtheoof/swappy)
--   [`fish`](https://github.com/fish-shell/fish-shell)
--   [`bash`](https://www.gnu.org/software/bash)
+- [`caelestia-cli`](https://github.com/caelestia-dots/cli)
+- [`quickshell-git`](https://git.outfoxxed.me/quickshell/quickshell) - this has to be the git version, not the latest tagged version
+- `glibc`
+- `gcc-libs`
+- [`ddcutil`](https://github.com/rockowitz/ddcutil)
+- [`brightnessctl`](https://github.com/Hummer12007/brightnessctl)
+- [`libcava`](https://github.com/LukashonakV/cava)
+- [`networkmanager`](https://gitlab.freedesktop.org/NetworkManager/NetworkManager)
+- [`lm_sensors`](https://github.com/lm-sensors/lm-sensors)
+- [`aubio`](https://github.com/aubio/aubio)
+- [`libpipewire`](https://github.com/PipeWire/pipewire)
+- [`libqalculate`](https://github.com/Qalculate/libqalculate)
+- [`power-profiles-daemon`](https://gitlab.freedesktop.org/upower/power-profiles-daemon)
+- [`ttf-material-symbols-variable`](https://github.com/google/material-design-icons)
+- [`ttf-rubik-vf`](https://github.com/googlefonts/rubik)
+- [`ttf-cascadia-code-nerd`](https://github.com/ryanoasis/nerd-fonts)
+- `qt6-base`
+- `qt6-declarative`
+- `qt6-imageformats`
+- [`qt6-m3shapes-git`](https://github.com/soramanew/m3shapes)
+- [`swappy`](https://github.com/jtheoof/swappy)
+- [`fish`](https://github.com/fish-shell/fish-shell)
+- [`bash`](https://www.gnu.org/software/bash)
 
 Build dependencies:
 
--   [`cmake`](https://gitlab.kitware.com/cmake/cmake)
--   [`ninja`](https://github.com/ninja-build/ninja)
--   `qt6-shadertools`
+- [`cmake`](https://gitlab.kitware.com/cmake/cmake)
+- [`ninja`](https://github.com/ninja-build/ninja)
+- `qt6-shadertools`
 
 > [!IMPORTANT]
 > The commands below (and in the "Updating" section) assume `$XDG_CONFIG_HOME` is set.
@@ -206,7 +206,6 @@ hyprctl monitors -j | jq -r '.[].name'
 
 Options set in these files will **override** the respective options in the global config. Any options not present in
 per-monitor configs will inherit their values from the global config.
-
 
 For example, to automatically hide the bar on the monitor named `DP-1`:
 
@@ -848,6 +847,61 @@ token values to produce the final computed values.
 Per-monitor token overrides are also available at
 `~/.config/caelestia/monitors/<monitor_name>/shell-tokens.json`.
 
+### Services panel
+
+Services are exposed through a standalone panel, independent from launcher state and launcher routing.
+
+- Toggle via the dedicated shortcut route: `services`.
+- You can also toggle over IPC route: `caelestia shell drawers toggle services`.
+- Configure service entries in **`~/.config/caelestia/services-panel.json`** (primary source).
+- A ready-to-copy template is available at `docs/services-panel.example.json`.
+- Fallback source (deprecated): `services.panelMappings`, then `launcher.services`.
+- Built-in adapters: `docker` (example) and `systemd` (generic unit adapter).
+- Privileged start/stop for `systemd` uses `pkexec` by default (set `params.noPkexec: true` to disable).
+- Compatibility note: `launcher.services` remains as a deprecated fallback during migration.
+- Follow-up cleanup: remove `launcher.services` fallback after migration window closes.
+
+Example `~/.config/caelestia/services-panel.json`:
+
+```json
+{
+    "mappings": [
+        {
+            "id": "docker",
+            "name": "Docker",
+            "description": "Container runtime daemon",
+            "icon": "deployed_code",
+            "adapter": "docker",
+            "enabled": true,
+            "capabilities": {
+                "start": true,
+                "stop": true
+            },
+            "params": {
+                "probeMode": "cli-only",
+                "startCommandPreference": ["systemctl"],
+                "stopCommandPreference": ["systemctl"]
+            }
+        },
+        {
+            "id": "network-manager",
+            "name": "NetworkManager",
+            "description": "Network service manager",
+            "icon": "network_check",
+            "adapter": "systemd",
+            "enabled": true,
+            "capabilities": {
+                "start": true,
+                "stop": true
+            },
+            "params": {
+                "unit": "NetworkManager.service"
+            }
+        }
+    ]
+}
+```
+
 ### Home Manager Module
 
 For NixOS users, a Home Manager module is also available.
@@ -890,22 +944,22 @@ The module automatically adds the shell to the path with **full functionality**.
 
 You can join the Caelestia Discord server for assistance and discussion [here][discord].
 
-### I want to make my own changes to the Hyprland config!
+### I want to make my own changes to the Hyprland config
 
 Check out the configuring section on the [dots repo](https://github.com/caelestia-dots/caelestia#configuring).
 
-### I want to make my own changes to other stuff!
+### I want to make my own changes to other stuff
 
 See the [manual installation](#manual-installation) section for the corresponding repo.
 
-### I want to disable ___ feature!
+### I want to disable ___ feature
 
 Please read the [configuring](#configuring) section.
 If there is no corresponding option, make a [feature request](https://github.com/caelestia-dots/shell/issues/new?template=feature.yml).
 
 ### How do I make my colour scheme change to match my wallpaper?
 
-Set a wallpaper via `>wallpaper` in the launcher or `caelestia wallpaper`, and set the scheme to the dynamic scheme via 
+Set a wallpaper via `>wallpaper` in the launcher or `caelestia wallpaper`, and set the scheme to the dynamic scheme via
 `>scheme` in the launcher or `caelestia scheme set`, e.g.:
 
 ```sh
@@ -913,7 +967,7 @@ caelestia wallpaper -f <path_to_wallpaper>
 caelestia scheme set -n dynamic
 ```
 
-### My wallpapers aren't showing up in the launcher!
+### My wallpapers aren't showing up in the launcher
 
 The launcher pulls wallpapers from `~/Pictures/Wallpapers` by default. You can change this in the config. Additionally,
 the launcher only shows an odd number of wallpapers at one time. If you only have 2 wallpapers, consider getting more
@@ -932,7 +986,7 @@ which helped me a lot with learning how to use Quickshell.
 
 Finally, another thank you to all the configs I took inspiration from (only one for now):
 
--   [Axenide/Ax-Shell](https://github.com/Axenide/Ax-Shell)
+- [Axenide/Ax-Shell](https://github.com/Axenide/Ax-Shell)
 
 ## Stonks 📈
 
