@@ -245,7 +245,7 @@ For example, to disable the bar on DP-1:
 > - `utilities` (`toasts`, `vpn`)
 > - `services` (`weatherLocation`, `useFahrenheit`, `useFahrenheitPerformance`, `useTwelveHourClock`,
 >   `gpuType`, `visualiserBars`, `audioIncrement`, `brightnessIncrement`, `maxVolume`, `smartScheme`,
->   `defaultPlayer`, `playerAliases`, `showLyrics`, `lyricsBackend`)
+>   `defaultPlayer`, `playerAliases`, `showLyrics`, `lyricsBackend`, `panelMappings`)
 > - `paths` (`wallpaperDir`, `lyricsDir`)
 >
 > </details>
@@ -668,7 +668,25 @@ For example, to disable the bar on DP-1:
         "useFahrenheitPerformance": false,
         "useTwelveHourClock": false,
         "smartScheme": true,
-        "visualiserBars": 45
+        "visualiserBars": 45,
+        "panelMappings": [
+            {
+                "id": "docker",
+                "name": "Docker",
+                "description": "Container runtime daemon",
+                "icon": "deployed_code",
+                "adapter": "docker",
+                "enabled": true,
+                "capabilities": {
+                    "start": true,
+                    "stop": false
+                },
+                "params": {
+                    "probeMode": "systemctl-or-cli",
+                    "startCommandPreference": ["systemctl", "service"]
+                }
+            }
+        ]
     },
     "session": {
         "dragThreshold": 30,
@@ -770,6 +788,61 @@ token values to produce the final computed values.
 
 Per-monitor token overrides are also available at
 `~/.config/caelestia/monitors/<screen-name>/shell-tokens.json`.
+
+### Services panel
+
+Services are exposed through a standalone panel, independent from launcher state and launcher routing.
+
+- Toggle via the dedicated shortcut route: `services`.
+- You can also toggle over IPC route: `caelestia shell drawers toggle services`.
+- Configure service entries in **`~/.config/caelestia/services-panel.json`** (primary source).
+- A ready-to-copy template is available at `docs/services-panel.example.json`.
+- Fallback source (deprecated): `services.panelMappings`, then `launcher.services`.
+- Built-in adapters: `docker` (example) and `systemd` (generic unit adapter).
+- Privileged start/stop for `systemd` uses `pkexec` by default (set `params.noPkexec: true` to disable).
+- Compatibility note: `launcher.services` remains as a deprecated fallback during migration.
+- Follow-up cleanup: remove `launcher.services` fallback after migration window closes.
+
+Example `~/.config/caelestia/services-panel.json`:
+
+```json
+{
+    "mappings": [
+        {
+            "id": "docker",
+            "name": "Docker",
+            "description": "Container runtime daemon",
+            "icon": "deployed_code",
+            "adapter": "docker",
+            "enabled": true,
+            "capabilities": {
+                "start": true,
+                "stop": true
+            },
+            "params": {
+                "probeMode": "cli-only",
+                "startCommandPreference": ["systemctl"],
+                "stopCommandPreference": ["systemctl"]
+            }
+        },
+        {
+            "id": "network-manager",
+            "name": "NetworkManager",
+            "description": "Network service manager",
+            "icon": "network_check",
+            "adapter": "systemd",
+            "enabled": true,
+            "capabilities": {
+                "start": true,
+                "stop": true
+            },
+            "params": {
+                "unit": "NetworkManager.service"
+            }
+        }
+    ]
+}
+```
 
 ### Home Manager Module
 

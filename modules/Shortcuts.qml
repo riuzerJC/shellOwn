@@ -16,7 +16,7 @@ Scope {
         if (!root.hasFullscreen)
             return true;
 
-        return !["launcher", "session", "dashboard", "workspaceOverlay"].includes(drawer);
+        return !["launcher", "services", "session", "dashboard", "workspaceOverlay"].includes(drawer);
     }
 
     // qmllint disable unresolved-type
@@ -87,6 +87,20 @@ Scope {
         name: "launcherInterrupt"
         description: "Interrupt launcher keybind"
         onPressed: root.launcherInterrupted = true
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "services"
+        description: "Toggle services panel"
+        onPressed: {
+            if (!root.canToggle("services"))
+                return;
+
+            const visibilities = Visibilities.getForActive();
+            visibilities.services = !visibilities.services;
+        }
     }
 
     // qmllint disable unresolved-type

@@ -40,6 +40,12 @@ Region {
     }
 
     R {
+        panel: root.panels.services
+        y: root.win.height - height
+        height: panel.height * (1 - root.panels.services.offsetScale) + root.borderThickness
+    }
+
+    R {
         id: sessionRegion
 
         panel: root.panels.sessionWrapper
