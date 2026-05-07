@@ -63,7 +63,7 @@ CustomMouseArea {
 
     anchors.fill: parent
     acceptedButtons: fullscreen ? Qt.NoButton : Qt.AllButtons
-    hoverEnabled: !fullscreen
+    hoverEnabled: true
 
     onPressed: event => dragStart = Qt.point(event.x, event.y)
     onContainsMouseChanged: {
@@ -104,6 +104,11 @@ CustomMouseArea {
         const y = event.y;
         const dragX = x - dragStart.x;
         const dragY = y - dragStart.y;
+
+        if (fullscreen) {
+            root.panels.osd.hovered = inRightPanel(panels.osdWrapper, x, y);
+            return;
+        }
 
         // Show bar in non-exclusive mode on hover
         if (!visibilities.bar && Config.bar.showOnHover && x < bar.clampedWidth)
