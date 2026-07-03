@@ -12,7 +12,7 @@ Item {
     required property ScreenState screenState
 
     readonly property bool configEnabled: Config.workspaceOverlay?.enabled !== false
-    readonly property bool shouldBeActive: screenState.workspaceOverlay && configEnabled
+    readonly property bool shouldBeActive: (screenState?.workspaceOverlay ?? false) && configEnabled
 
     property real offsetScale: shouldBeActive ? 0 : 1
 
@@ -35,7 +35,6 @@ Item {
         anchors.top: parent.top
 
         active: root.shouldBeActive || root.offsetScale < 0.999
-        asynchronous: true
 
         sourceComponent: Content {
             screen: root.screen

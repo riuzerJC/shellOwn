@@ -56,7 +56,7 @@ Item {
             root.triggerPrimaryAction();
         }
 
-        radius: Tokens.rounding.normal
+        radius: Tokens.rounding.medium
         disabled: root.modelData?.busy ?? false
     }
 
@@ -66,11 +66,11 @@ Item {
         anchors.rightMargin: Tokens.padding.larger
         anchors.margins: Tokens.padding.smaller
 
-        spacing: Tokens.spacing.normal
+        spacing: Tokens.spacing.medium
 
         MaterialIcon {
             text: root.modelData?.icon ?? "deployed_code"
-            font.pointSize: Tokens.font.size.extraLarge
+            fontStyle: Tokens.font.icon.extraLarge
             Layout.alignment: Qt.AlignVCenter
         }
 
@@ -82,14 +82,14 @@ Item {
             StyledText {
                 Layout.fillWidth: true
                 text: root.modelData?.name ?? ""
-                font.pointSize: Tokens.font.size.normal
+                font: Tokens.font.body.medium
                 elide: Text.ElideRight
             }
 
             StyledText {
                 Layout.fillWidth: true
                 text: root.modelData?.lastError?.length > 0 ? root.modelData.lastError : (root.modelData?.description ?? "")
-                font.pointSize: Tokens.font.size.small
+                font: Tokens.font.body.small
                 color: root.modelData?.lastError?.length > 0 ? Colours.palette.m3error : Colours.palette.m3outline
                 elide: Text.ElideRight
             }
@@ -98,7 +98,7 @@ Item {
         StyledRect {
             radius: Tokens.rounding.full
             color: root.stateColor(root.modelData?.state ?? "unknown")
-            implicitWidth: stateText.implicitWidth + Tokens.padding.normal * 2
+            implicitWidth: stateText.implicitWidth + Tokens.padding.medium * 2
             implicitHeight: stateText.implicitHeight + Tokens.padding.small * 2
             Layout.alignment: Qt.AlignVCenter
 
@@ -108,7 +108,7 @@ Item {
                 anchors.centerIn: parent
                 text: root.stateLabel(root.modelData?.state ?? "unknown")
                 color: root.stateTextColor(root.modelData?.state ?? "unknown")
-                font.pointSize: Tokens.font.size.small
+                font: Tokens.font.label.small
             }
         }
 
@@ -161,7 +161,7 @@ Item {
 
             text: iconRoot.iconName
             color: iconRoot.enabled ? Colours.palette.m3onSurfaceVariant : Qt.alpha(Colours.palette.m3onSurfaceVariant, 0.3)
-            font.pointSize: Tokens.font.size.large
+            fontStyle: Tokens.font.icon.large
 
             ToolTip.visible: mouse.containsMouse
             ToolTip.text: iconRoot.tooltipText
