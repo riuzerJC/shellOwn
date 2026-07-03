@@ -182,13 +182,6 @@ StyledWindow {
             smoothing: root.contentItem.Config.border.smoothing
         }
 
-        BlobGroup {
-            id: overlayTransparentGroup
-
-            color: "transparent"
-            smoothing: root.contentItem.Config.border.smoothing
-        }
-
         BlobInvertedRect {
             anchors.fill: parent
             anchors.margins: -50 // Make border thicker to smooth out bulge from closed drawers
