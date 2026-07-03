@@ -10,7 +10,7 @@ Item {
     id: root
 
     required property DesktopEntry modelData
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
 
     implicitHeight: Tokens.sizes.launcher.itemHeight
 
@@ -21,7 +21,7 @@ Item {
         radius: Tokens.rounding.large
         onClicked: {
             Apps.launch(root.modelData);
-            root.visibilities.launcher = false;
+            root.screenState.launcher = false;
         }
     }
 

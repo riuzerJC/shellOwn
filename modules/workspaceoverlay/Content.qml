@@ -12,7 +12,7 @@ StyledRect {
     id: root
 
     required property ShellScreen screen
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
 
     readonly property bool perMonitorWorkspaces: GlobalConfig.bar.workspaces.perMonitorWorkspaces
     readonly property var monitor: Hypr.monitorFor(screen)

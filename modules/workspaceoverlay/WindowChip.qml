@@ -13,7 +13,6 @@ StyledRect {
 
     required property var window
     required property string sourceToken
-    property string monitorName: ""
     required property string monitorName
     required property var onDragCommit
 
@@ -33,19 +32,12 @@ StyledRect {
     property real dragY: 0
 
     radius: Tokens.rounding.small
-<<<<<<< HEAD
     color: dragHandler.active ? Colours.tPalette.m3secondaryContainer : Colours.tPalette.m3surfaceContainerHigh
-    border.width: 1
-    border.color: dragHandler.active ? Colours.tPalette.m3secondary : Colours.tPalette.m3outlineVariant
-
-    implicitHeight: 58
-    implicitWidth: 96
     border.width: 1
     border.color: dragHandler.active ? Colours.tPalette.m3secondary : Colours.tPalette.m3outlineVariant
 
     implicitHeight: 74
     implicitWidth: 112
->>>>>>> 372bdb2c (feat: refactor workspace overlay into preview tile grids)
 
     Drag.active: dragHandler.active
     Drag.source: root

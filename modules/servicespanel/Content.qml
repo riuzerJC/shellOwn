@@ -10,7 +10,7 @@ import qs.modules.servicespanel.core
 Item {
     id: root
 
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
 
     readonly property int padding: Tokens.padding.large
 
@@ -79,19 +79,19 @@ Item {
 
             Keys.onUpPressed: list.decrementCurrentIndex()
             Keys.onDownPressed: list.incrementCurrentIndex()
-            Keys.onEscapePressed: root.visibilities.services = false
+            Keys.onEscapePressed: root.screenState.services = false
 
             Component.onCompleted: forceActiveFocus()
 
             Connections {
                 function onServicesChanged(): void {
-                    if (!root.visibilities.services)
+                    if (!root.screenState.services)
                         search.text = "";
                     else
                         search.forceActiveFocus();
                 }
 
-                target: root.visibilities
+                target: root.screenState
             }
         }
 

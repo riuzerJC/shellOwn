@@ -8,9 +8,9 @@ import qs.modules.servicespanel.core
 Item {
     id: root
 
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
 
-    readonly property bool shouldBeActive: visibilities.services
+    readonly property bool shouldBeActive: screenState.services
 
     property real offsetScale: shouldBeActive ? 0 : 1
 
@@ -46,7 +46,7 @@ Item {
         active: root.shouldBeActive || root.visible
 
         sourceComponent: Content {
-            visibilities: root.visibilities
+            screenState: root.screenState
         }
     }
 }

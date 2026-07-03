@@ -9,10 +9,10 @@ Item {
     id: root
 
     required property ShellScreen screen
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
 
     readonly property bool configEnabled: Config.workspaceOverlay?.enabled !== false
-    readonly property bool shouldBeActive: visibilities.workspaceOverlay && configEnabled
+    readonly property bool shouldBeActive: screenState.workspaceOverlay && configEnabled
 
     property real offsetScale: shouldBeActive ? 0 : 1
 
@@ -39,7 +39,7 @@ Item {
 
         sourceComponent: Content {
             screen: root.screen
-            visibilities: root.visibilities
+            screenState: root.screenState
         }
     }
 }
