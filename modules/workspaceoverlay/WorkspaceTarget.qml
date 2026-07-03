@@ -30,16 +30,16 @@ StyledRect {
             return dropActive;
         return payload.sourceToken !== targetToken;
     }
-    readonly property color idleColor: isSpecial ? Qt.alpha(Colours.palette.m3surfaceContainer, 0.46) : Colours.tPalette.m3surfaceContainer
-    readonly property color idleBorderColor: isSpecial ? Qt.alpha(Colours.palette.m3outlineVariant, 0.72) : Colours.tPalette.m3outlineVariant
-    readonly property color previewBgColor: isSpecial ? Qt.alpha(Colours.palette.m3surfaceContainerLow, 0.5) : Colours.tPalette.m3surfaceContainerLow
-    readonly property color previewBorderColor: isSpecial ? Qt.alpha(Colours.palette.m3outlineVariant, 0.64) : Colours.tPalette.m3outlineVariant
+    readonly property color idleColor: isSpecial ? Colours.tPalette.m3surfaceContainerHigh : Colours.tPalette.m3surfaceContainer
+    readonly property color idleBorderColor: isSpecial ? Colours.tPalette.m3outline : Colours.tPalette.m3outlineVariant
+    readonly property color previewBgColor: Colours.tPalette.m3surfaceContainerLow
+    readonly property color previewBorderColor: isSpecial ? Colours.tPalette.m3outline : Colours.tPalette.m3outlineVariant
     // end-4 parity: both normal and special tiles share size
     readonly property int tileWidth: 244
     readonly property int tileHeight: 170
     readonly property int previewHeight: 124
 
-    radius: Tokens.rounding.normal
+    radius: Tokens.rounding.medium
     color: dropActive ? (canDrop ? Colours.tPalette.m3secondaryContainer : Colours.tPalette.m3errorContainer) : idleColor
     border.width: 1
     border.color: dropActive ? (canDrop ? Colours.tPalette.m3secondary : Colours.tPalette.m3error) : idleBorderColor
@@ -65,15 +65,14 @@ StyledRect {
             StyledText {
                 Layout.fillWidth: true
                 text: root.isSpecial ? root.wsName : qsTr("Workspace %1").arg(root.wsId)
-                font.pointSize: Tokens.font.size.normal
-                font.weight: 600
+                font: Tokens.font.body.builders.medium.weight(Font.Medium).build()
                 color: Colours.tPalette.m3onSurface
             }
 
             StyledText {
                 text: qsTr("%1 windows").arg(root.windows.length)
                 color: Colours.tPalette.m3onSurfaceVariant
-                font.pointSize: Tokens.font.size.small
+                font: Tokens.font.body.small
             }
         }
 
@@ -118,7 +117,7 @@ StyledRect {
                     visible: root.windows.length === 0
                     text: qsTr("Drop window here")
                     color: Colours.tPalette.m3onSurfaceVariant
-                    font.pointSize: Tokens.font.size.small
+                    font: Tokens.font.body.small
                 }
             }
         }
@@ -132,7 +131,7 @@ StyledRect {
                 visible: root.inFlightByAddress[modelData]?.targetToken === root.targetToken
                 text: qsTr("Moving 0x%1…").arg(modelData)
                 color: Colours.tPalette.m3onSurfaceVariant
-                font.pointSize: Tokens.font.size.small
+                font: Tokens.font.body.small
             }
         }
     }

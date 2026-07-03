@@ -72,7 +72,7 @@ StyledRect {
         anchors.margins: 1
         height: 18
         radius: root.radius - 1
-        color: Qt.rgba(0, 0, 0, 0.5)
+        color: Qt.alpha(Colours.palette.m3scrim, 0.56)
 
         StyledText {
             anchors.verticalCenter: parent.verticalCenter
@@ -82,8 +82,8 @@ StyledRect {
             anchors.rightMargin: Tokens.padding.small
             text: root.window?.lastIpcObject?.class || root.window?.title || qsTr("Window")
             elide: Text.ElideRight
-            font.pointSize: Tokens.font.size.smaller
-            color: Qt.rgba(1, 1, 1, 0.9)
+            font: Tokens.font.label.small
+            color: Colours.palette.m3onSurface
         }
     }
 
@@ -93,8 +93,8 @@ StyledRect {
 
         sourceComponent: MaterialIcon {
             text: "web_asset_off"
-            color: Qt.rgba(1, 1, 1, 0.45)
-            font.pointSize: Tokens.font.size.large
+            color: Qt.alpha(Colours.palette.m3onSurfaceVariant, 0.55)
+            fontStyle: Tokens.font.icon.large
         }
     }
 
