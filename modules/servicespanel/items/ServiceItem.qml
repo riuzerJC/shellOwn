@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.components.controls
@@ -60,62 +59,45 @@ Item {
         disabled: root.modelData?.busy ?? false
     }
 
-    RowLayout {
+    Item {
         anchors.fill: parent
         anchors.leftMargin: Tokens.padding.medium
         anchors.rightMargin: Tokens.padding.medium
         anchors.margins: Tokens.padding.small
 
-        spacing: Tokens.spacing.medium
-
+        // Service icon (left)
         MaterialIcon {
+            id: icon
+
             text: root.modelData?.icon ?? "deployed_code"
             fontStyle: Tokens.font.icon.extraLarge
             color: Colours.palette.m3onSurface
-            Layout.alignment: Qt.AlignVCenter
+            anchors.verticalCenter: parent.verticalCenter
         }
 
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignVCenter
-            spacing: 0
+        // Right-side group: state badge + action icons
+        Row {
+            id: rightGroup
 
-            StyledText {
-                Layout.fillWidth: true
-                text: root.modelData?.name ?? ""
-                font: Tokens.font.body.medium
-                elide: Text.ElideRight
-            }
-
-            StyledText {
-                Layout.fillWidth: true
-                text: root.modelData?.lastError?.length > 0 ? root.modelData.lastError : (root.modelData?.description ?? "")
-                font: Tokens.font.body.small
-                color: root.modelData?.lastError?.length > 0 ? Colours.palette.m3error : Colours.palette.m3outline
-                elide: Text.ElideRight
-            }
-        }
-
-        StyledRect {
-            radius: Tokens.rounding.full
-            color: root.stateColor(root.modelData?.state ?? "unknown")
-            implicitWidth: stateText.implicitWidth + Tokens.padding.medium * 2
-            implicitHeight: stateText.implicitHeight + Tokens.padding.small * 2
-            Layout.alignment: Qt.AlignVCenter
-
-            StyledText {
-                id: stateText
-
-                anchors.centerIn: parent
-                text: root.stateLabel(root.modelData?.state ?? "unknown")
-                color: root.stateTextColor(root.modelData?.state ?? "unknown")
-                font: Tokens.font.label.small
-            }
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignVCenter
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
             spacing: Tokens.spacing.small
+
+            StyledRect {
+                radius: Tokens.rounding.full
+                color: root.stateColor(root.modelData?.state ?? "unknown")
+                implicitWidth: stateText.implicitWidth + Tokens.padding.medium * 2
+                implicitHeight: stateText.implicitHeight + Tokens.padding.small * 2
+
+                StyledText {
+                    id: stateText
+
+                    anchors.centerIn: parent
+                    text: root.stateLabel(root.modelData?.state ?? "unknown")
+                    color: root.stateTextColor(root.modelData?.state ?? "unknown")
+                    font: Tokens.font.label.small
+                }
+            }
 
             ActionIcon {
                 iconName: "refresh"
@@ -142,6 +124,39 @@ Item {
                 implicitWidth: 18
                 implicitHeight: 18
                 running: root.modelData?.busy ?? false
+            }
+        }
+
+        // Text area (fills space between icon and rightGroup)
+        Item {
+            anchors.left: icon.right
+            anchors.leftMargin: Tokens.spacing.medium
+            anchors.right: rightGroup.left
+            anchors.rightMargin: Tokens.spacing.medium
+            anchors.verticalCenter: icon.verticalCenter
+
+            implicitHeight: name.implicitHeight + description.implicitHeight
+
+            StyledText {
+                id: name
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                text: root.modelData?.name ?? ""
+                font: Tokens.font.body.medium
+                elide: Text.ElideRight
+            }
+
+            StyledText {
+                id: description
+
+                anchors.top: name.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                text: root.modelData?.lastError?.length > 0 ? root.modelData.lastError : (root.modelData?.description ?? "")
+                font: Tokens.font.body.small
+                color: root.modelData?.lastError?.length > 0 ? Colours.palette.m3error : Colours.palette.m3outline
+                elide: Text.ElideRight
             }
         }
     }
