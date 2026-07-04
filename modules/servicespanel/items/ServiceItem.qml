@@ -56,14 +56,14 @@ Item {
             root.triggerPrimaryAction();
         }
 
-        radius: Tokens.rounding.medium
+        radius: Tokens.rounding.large
         disabled: root.modelData?.busy ?? false
     }
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: Tokens.padding.large
-        anchors.rightMargin: Tokens.padding.large
+        anchors.leftMargin: Tokens.padding.medium
+        anchors.rightMargin: Tokens.padding.medium
         anchors.margins: Tokens.padding.small
 
         spacing: Tokens.spacing.medium
@@ -71,6 +71,7 @@ Item {
         MaterialIcon {
             text: root.modelData?.icon ?? "deployed_code"
             fontStyle: Tokens.font.icon.extraLarge
+            color: Colours.palette.m3onSurface
             Layout.alignment: Qt.AlignVCenter
         }
 

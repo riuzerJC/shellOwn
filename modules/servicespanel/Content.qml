@@ -70,8 +70,8 @@ Item {
             anchors.leftMargin: Tokens.spacing.small
             anchors.rightMargin: Tokens.spacing.small
 
-            topPadding: Tokens.padding.larger
-            bottomPadding: Tokens.padding.larger
+            topPadding: Tokens.padding.large
+            bottomPadding: Tokens.padding.large
 
             placeholderText: qsTr("Search services")
 
