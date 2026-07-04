@@ -50,6 +50,11 @@ Item {
     anchors.left: parent?.left
     anchors.right: parent?.right
 
+    FontLoader {
+        id: nerdFontLoader
+        source: "/usr/share/fonts/TTF/CaskaydiaCoveNerdFont-Regular.ttf"
+    }
+
     StateLayer {
         function onClicked(): void {
             root.triggerPrimaryAction();
@@ -73,6 +78,24 @@ Item {
             fontStyle: Tokens.font.icon.extraLarge
             color: Colours.palette.m3onSurface
             anchors.verticalCenter: parent.verticalCenter
+            visible: root.modelData?.iconFont !== "nerd"
+        }
+
+        Loader {
+            id: nerdIconLoader
+
+            anchors.verticalCenter: parent.verticalCenter
+            active: root.modelData?.iconFont === "nerd"
+            visible: active
+            sourceComponent: Component {
+                Text {
+                    text: root.modelData?.icon ?? ""
+                    font.family: nerdFontLoader.name
+                    font.pointSize: 32
+                    color: Colours.palette.m3onSurface
+                    renderType: Text.NativeRendering
+                }
+            }
         }
 
         // Right-side group: state badge + action icons
