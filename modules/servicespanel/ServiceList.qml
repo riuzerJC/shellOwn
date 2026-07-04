@@ -33,7 +33,7 @@ StyledListView {
     highlightFollowsCurrentItem: false
 
     highlight: StyledRect {
-        radius: Tokens.rounding.normal
+        radius: Tokens.rounding.medium
         color: Colours.palette.m3onSurface
         opacity: 0.08
 

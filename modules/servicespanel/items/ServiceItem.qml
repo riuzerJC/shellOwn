@@ -62,9 +62,9 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: Tokens.padding.larger
-        anchors.rightMargin: Tokens.padding.larger
-        anchors.margins: Tokens.padding.smaller
+        anchors.leftMargin: Tokens.padding.large
+        anchors.rightMargin: Tokens.padding.large
+        anchors.margins: Tokens.padding.small
 
         spacing: Tokens.spacing.medium
 

@@ -25,6 +25,52 @@ QtObject {
 
     readonly property var adapterRegistry: root.buildAdapterRegistry()
 
+    readonly property Timer verificationTimer: Timer {
+        interval: 1500
+        repeat: false
+
+        property string actionName: ""
+        property string successSuffix: ""
+        property string verifyFailureSuffix: ""
+        property int retries: 0
+        property var targetEntry: null
+
+        onTriggered: {
+            if (!targetEntry || retries <= 0) {
+                const verificationMessage = qsTr("Action finished but state verification failed after retries.");
+                if (targetEntry) {
+                    targetEntry.lastError = verificationMessage;
+                    targetEntry.busy = false;
+                }
+                root.emitToast(qsTr("State verification failed"), verificationMessage, "error");
+                return;
+            }
+
+            retries -= 1;
+            root.probeEntry(targetEntry, {
+                silent: true,
+                allowBusy: true
+            }, verifyResult => {
+                const expectedState = actionName === "start" ? "running" : "stopped";
+                if (verifyResult.ok && verifyResult.state === expectedState) {
+                    targetEntry.busy = false;
+                    targetEntry.lastError = "";
+                    root.emitToast(qsTr("%1 %2").arg(targetEntry.name).arg(successSuffix), qsTr("Service status confirmed."), "check_circle");
+                    return;
+                }
+
+                if (verifyResult.state !== expectedState && retries > 0) {
+                    restart();
+                } else {
+                    targetEntry.busy = false;
+                    const verificationMessage = verifyResult.message || qsTr("Action finished but state verification failed.");
+                    targetEntry.lastError = verificationMessage;
+                    root.emitToast(qsTr("%1 %2").arg(targetEntry.name).arg(verifyFailureSuffix), verificationMessage, "error");
+                }
+            });
+        }
+    }
+
     function setPanelVisible(active: bool): void {
         panelVisible = active;
 
@@ -411,22 +457,34 @@ QtObject {
                 return;
             }
 
-            probeEntry(entry, {
-                silent: true,
-                allowBusy: true
-            }, verifyResult => {
-                entry.busy = false;
+            Qt.callLater(() => {
+                probeEntry(entry, {
+                    silent: true,
+                    allowBusy: true
+                }, verifyResult => {
+                    entry.busy = false;
 
-                const expectedState = actionName === "start" ? "running" : "stopped";
-                if (verifyResult.ok && verifyResult.state === expectedState) {
-                    entry.lastError = "";
-                    emitToast(qsTr("%1 %2").arg(entry.name).arg(successSuffix), qsTr("Service status confirmed."), "check_circle");
-                    return;
-                }
+                    const expectedState = actionName === "start" ? "running" : "stopped";
+                    if (verifyResult.ok && verifyResult.state === expectedState) {
+                        entry.lastError = "";
+                        emitToast(qsTr("%1 %2").arg(entry.name).arg(successSuffix), qsTr("Service status confirmed."), "check_circle");
+                        return;
+                    }
 
-                const verificationMessage = verifyResult.message || qsTr("Action finished but state verification failed.");
-                entry.lastError = verificationMessage;
-                emitToast(qsTr("%1 %2").arg(entry.name).arg(verifyFailureSuffix), verificationMessage, "error");
+                    if (verifyResult.state === "running" && actionName === "stop") {
+                        verificationTimer.targetEntry = entry;
+                        verificationTimer.actionName = actionName;
+                        verificationTimer.successSuffix = successSuffix;
+                        verificationTimer.verifyFailureSuffix = verifyFailureSuffix;
+                        verificationTimer.retries = 3;
+                        verificationTimer.restart();
+                        return;
+                    }
+
+                    const verificationMessage = verifyResult.message || qsTr("Action finished but state verification failed.");
+                    entry.lastError = verificationMessage;
+                    emitToast(qsTr("%1 %2").arg(entry.name).arg(verifyFailureSuffix), verificationMessage, "error");
+                });
             });
         });
     }

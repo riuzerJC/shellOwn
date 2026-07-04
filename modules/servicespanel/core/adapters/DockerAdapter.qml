@@ -28,7 +28,33 @@ QtObject {
     }
 
     function probe(serviceConfig: var, callback: var): void {
-        runProbeFallback(buildProbeCommands(serviceConfig), 0, [], callback);
+        runCommand(["systemctl", "is-active", "docker"], result => {
+            const output = `${result.output ?? ""}\n${result.error ?? ""}`.toLowerCase();
+            if (result.success && output.includes("active")) {
+                callback({
+                    ok: true,
+                    state: "running",
+                    message: qsTr("Docker is running."),
+                    detail: output.trim()
+                });
+                return;
+            }
+            if (output.includes("inactive") || output.includes("failed") || output.includes("dead") || (result.exitCode !== undefined && result.exitCode !== 0)) {
+                callback({
+                    ok: true,
+                    state: "stopped",
+                    message: qsTr("Docker is stopped."),
+                    detail: output.trim()
+                });
+                return;
+            }
+            callback({
+                ok: false,
+                state: "unknown",
+                message: qsTr("Unable to determine Docker status."),
+                detail: output.trim()
+            });
+        });
     }
 
     function start(serviceConfig: var, callback: var): void {
@@ -55,11 +81,12 @@ QtObject {
 
     function buildStartCommands(serviceConfig: var): var {
         const preference = serviceConfig?.params?.startCommandPreference ?? ["systemctl", "service"];
+        const usePkexec = serviceConfig?.params?.noPkexec !== true;
         const commands = [];
 
         for (const strategy of preference) {
             if (strategy === "systemctl")
-                commands.push(["systemctl", "start", "docker"]);
+                commands.push(usePkexec ? ["pkexec", "systemctl", "start", "docker.socket", "docker"] : ["systemctl", "start", "docker.socket", "docker"]);
             else if (strategy === "service")
                 commands.push(["service", "docker", "start"]);
             else if (strategy === "rc-service")
@@ -67,18 +94,19 @@ QtObject {
         }
 
         if (commands.length === 0)
-            commands.push(["systemctl", "start", "docker"]);
+            commands.push(usePkexec ? ["pkexec", "systemctl", "start", "docker.socket", "docker"] : ["systemctl", "start", "docker.socket", "docker"]);
 
         return commands;
     }
 
     function buildStopCommands(serviceConfig: var): var {
         const preference = serviceConfig?.params?.stopCommandPreference ?? ["systemctl", "service"];
+        const usePkexec = serviceConfig?.params?.noPkexec !== true;
         const commands = [];
 
         for (const strategy of preference) {
             if (strategy === "systemctl")
-                commands.push(["systemctl", "stop", "docker"]);
+                commands.push(usePkexec ? ["pkexec", "systemctl", "stop", "docker.socket", "docker"] : ["systemctl", "stop", "docker.socket", "docker"]);
             else if (strategy === "service")
                 commands.push(["service", "docker", "stop"]);
             else if (strategy === "rc-service")
@@ -86,7 +114,7 @@ QtObject {
         }
 
         if (commands.length === 0)
-            commands.push(["systemctl", "stop", "docker"]);
+            commands.push(usePkexec ? ["pkexec", "systemctl", "stop", "docker.socket", "docker"] : ["systemctl", "stop", "docker.socket", "docker"]);
 
         return commands;
     }
@@ -179,22 +207,22 @@ QtObject {
         const output = `${result.output ?? ""}\n${result.error ?? ""}`.toLowerCase();
         const success = result.success ?? false;
 
-        if (success && (output.includes("running") || output.includes("active"))) {
+        // systemctl is-active: exit 0 = active, anything else = not active
+        if (command[0] === "systemctl" && command[1] === "is-active") {
+            if (result.exitCode === 0) {
+                return {
+                    resolved: true,
+                    trace: `${cmdLabel}: running`,
+                    result: {
+                        ok: true,
+                        state: "running",
+                        message: qsTr("Docker is running.")
+                    }
+                };
+            }
             return {
                 resolved: true,
-                trace: `${cmdLabel}: running`,
-                result: {
-                    ok: true,
-                    state: "running",
-                    message: qsTr("Docker is running.")
-                }
-            };
-        }
-
-        if (output.includes("inactive") || output.includes("failed") || output.includes("stopped") || output.includes("not running") || output.includes("dead")) {
-            return {
-                resolved: true,
-                trace: `${cmdLabel}: stopped`,
+                trace: `${cmdLabel}: stopped (exit ${result.exitCode})`,
                 result: {
                     ok: true,
                     state: "stopped",
