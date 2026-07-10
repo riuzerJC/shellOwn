@@ -13,6 +13,7 @@ PersistentProperties {
     property bool utilities
     property bool sidebar
     property bool workspaceOverlay
+    property bool appCatalog
 
     // Dashboard state
     property int dashboardTab

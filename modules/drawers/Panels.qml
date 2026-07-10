@@ -3,6 +3,7 @@ import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.modules.bar as Bar
+import qs.modules.appcatalog as AppCatalog
 import qs.modules.dashboard as Dashboard
 import qs.modules.launcher as Launcher
 import qs.modules.servicespanel as ServicesPanel
@@ -37,6 +38,7 @@ Item {
     readonly property alias toasts: toasts
     readonly property alias sidebar: sidebar
     readonly property alias workspaceOverlay: workspaceOverlay
+    readonly property alias appCatalog: appCatalog
 
     anchors.fill: parent
     anchors.margins: borderThickness
@@ -113,6 +115,15 @@ Item {
 
     ServicesPanel.Wrapper {
         id: services
+
+        screenState: root.screenState
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+    }
+
+    AppCatalog.Wrapper {
+        id: appCatalog
 
         screenState: root.screenState
 

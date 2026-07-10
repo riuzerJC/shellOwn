@@ -66,6 +66,7 @@ StyledWindow {
     onHasFullscreenChanged: {
         screenState.launcher = false;
         screenState.services = false;
+        screenState.appCatalog = false;
         screenState.session = false;
         screenState.dashboard = false;
         panels.popouts.close();
@@ -76,7 +77,7 @@ StyledWindow {
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: (fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen) || (hasSpecialWorkspace && hasFullscreenOnNormalWs) ? WlrLayer.Overlay : WlrLayer.Top
-    WlrLayershell.keyboardFocus: screenState.launcher || screenState.session || (screenState.workspaceOverlay && workspaceOverlayEnabled) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: screenState.launcher || screenState.appCatalog || screenState.session || (screenState.workspaceOverlay && workspaceOverlayEnabled) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 
@@ -123,7 +124,7 @@ StyledWindow {
         active: {
             const s = root.screenState;
             const conf = root.contentItem.Config;
-            if ((s.launcher && conf.launcher.enabled) || s.services || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled))
+            if ((s.launcher && conf.launcher.enabled) || s.appCatalog || s.services || (s.session && conf.session.enabled) || (s.sidebar && conf.sidebar.enabled))
                 return true;
             if (!conf.dashboard.showOnHover && s.dashboard && conf.dashboard.enabled)
                 return true;
@@ -137,6 +138,7 @@ StyledWindow {
         onCleared: {
             root.screenState.launcher = false;
             root.screenState.services = false;
+            root.screenState.appCatalog = false;
             root.screenState.session = false;
             root.screenState.sidebar = false;
             root.screenState.dashboard = false;
@@ -211,6 +213,13 @@ StyledWindow {
             id: servicesBg
 
             panel: panels.services
+            deformAmount: 0.1
+        }
+
+        PanelBg {
+            id: appCatalogBg
+
+            panel: panels.appCatalog
             deformAmount: 0.1
         }
 
@@ -312,6 +321,9 @@ StyledWindow {
             }
             services.transform: Matrix4x4 {
                 matrix: servicesBg.deformMatrix
+            }
+            appCatalog.transform: Matrix4x4 {
+                matrix: appCatalogBg.deformMatrix
             }
             workspaceOverlay.transform: Matrix4x4 {
                 matrix: workspaceOverlayBg.deformMatrix
