@@ -123,6 +123,17 @@ StyledRect {
                     }
                 }
                 DelegateChoice {
+                    roleValue: "appCatalog"
+                    delegate: Toggle {
+                        icon: "apps"
+                        checked: root.screenState.appCatalog
+                        onClicked: {
+                            root.screenState.utilities = false;
+                            root.screenState.appCatalog = true;
+                        }
+                    }
+                }
+                DelegateChoice {
                     roleValue: "gameMode"
                     delegate: Toggle {
                         icon: "gamepad"
