@@ -1,0 +1,53 @@
+{
+  "_comment": "Bundled fallback catalog for the Apps & TUIs drawer. Users can override it at $XDG_CONFIG_HOME/caelestia/app-catalog.json.",
+  "entries": [
+    {
+      "id": "btop",
+      "name": "btop",
+      "description": "Interactive terminal resource monitor for CPU, memory, disks, network, and processes.",
+      "type": "tui",
+      "tags": ["monitoring", "system", "terminal"],
+      "icon": "monitoring",
+      "binary": "btop",
+      "command": ["btop"],
+      "terminal": true,
+      "packages": {
+        "arch": ["btop"],
+        "nixos": ["btop"]
+      },
+      "examples": ["btop"]
+    },
+    {
+      "id": "kitty",
+      "name": "Kitty",
+      "description": "GPU-accelerated terminal emulator suitable for launching command-line tools.",
+      "type": "gui",
+      "tags": ["terminal", "launcher"],
+      "icon": "terminal",
+      "desktopId": "kitty.desktop",
+      "binary": "kitty",
+      "command": ["kitty"],
+      "packages": {
+        "arch": ["kitty"],
+        "nixos": ["kitty"]
+      },
+      "examples": ["kitty"]
+    },
+    {
+      "id": "ripgrep",
+      "name": "ripgrep",
+      "description": "Fast recursive text search tool for code and plain-text files.",
+      "type": "cli",
+      "tags": ["search", "developer", "terminal"],
+      "icon": "search",
+      "binary": "rg",
+      "command": ["rg"],
+      "terminal": true,
+      "packages": {
+        "arch": ["ripgrep"],
+        "nixos": ["ripgrep"]
+      },
+      "examples": ["rg pattern ~/projects"]
+    }
+  ]
+}
