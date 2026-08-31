@@ -20,7 +20,13 @@ PanelWindow {
 
     color: "transparent"
     visible: isAuthActive
-    anchors.fill: parent
+
+    anchors {
+        top: true
+        bottom: true
+        left: true
+        right: true
+    }
 
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: isAuthActive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
