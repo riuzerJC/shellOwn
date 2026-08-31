@@ -83,12 +83,32 @@ QtObject {
         return search.trim();
     }
 
-    function emitToast(title: string, message: string, icon: string, toastType: int = Toast.Info): void {
+    function emitToast(title: string, message: string, icon: string, toastType: var): void {
+        const type = typeof toastType === "number" ? toastType : 0;
         if (typeof Toaster !== "undefined" && Toaster?.toast)
-            Toaster.toast(title, message, icon, toastType, 4000);
-        else
-            console.warn(`[services.panel] ${title}: ${message}`);
+            Toaster.toast(title, message, icon, type, 4000);
+
+        const urgency = type === Toast.Error ? "critical" : (type === Toast.Warning ? "normal" : "low");
+        const proc = notifyProcessFactory.createObject(root, {
+            cmdArgs: ["notify-send", "-a", "Caelestia Services", "-u", urgency, title, message]
+        });
+        if (proc) {
+            proc.processFinished.connect(() => proc.destroy());
+            Qt.callLater(() => {
+                proc.command = proc.cmdArgs;
+                proc.running = true;
+            });
+        }
     }
+
+    component NotifyProcess: Process {
+        property list<string> cmdArgs: []
+        signal processFinished
+
+        onExited: processFinished()
+    }
+
+    readonly property Component notifyProcessFactory: Component { NotifyProcess {} }
 
     function query(search: string): list<QtObject> {
         const filtered = serviceEntries.filter(entry => entry.enabled);
