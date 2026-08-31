@@ -3,8 +3,10 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Caelestia
 import Caelestia.Config
 import qs.components
+import qs.components.controls
 import qs.services
 import "WorkspaceModel.js" as WorkspaceModel
 
@@ -18,12 +20,14 @@ StyledRect {
     readonly property var monitor: Hypr.monitorFor(screen)
     readonly property var workspaceGroups: WorkspaceModel.collectWorkspaces(Hypr.workspaces.values, monitor, perMonitorWorkspaces)
     readonly property var windowsByWorkspace: WorkspaceModel.groupWindowsByWorkspace(Hypr.toplevels.values, workspaceGroups)
+    readonly property int totalWindowsCount: Hypr.toplevels.values.length
+
     readonly property int shownCount: 10
     readonly property int sectionColumns: 5
     readonly property int sectionPadding: Tokens.padding.medium
     readonly property int sectionGap: Tokens.spacing.medium
-    readonly property int sectionHeaderHeight: 36
-    readonly property int targetHeight: 176
+    readonly property int sectionHeaderHeight: 32
+    readonly property int targetHeight: 160
     readonly property int targetColumnGap: Tokens.spacing.small
     readonly property int targetRowGap: Tokens.spacing.small
     readonly property int targetWidth: Math.max(160, Math.floor((implicitWidth - Tokens.padding.large * 2 - sectionPadding * 2 - targetColumnGap * (sectionColumns - 1)) / sectionColumns))
@@ -31,6 +35,7 @@ StyledRect {
     readonly property int specialSectionRows: 1
     readonly property int normalSectionHeight: sectionHeightForRows(normalSectionRows)
     readonly property int specialSectionHeight: sectionHeightForRows(specialSectionRows)
+
     readonly property int maxExistingWorkspaceId: {
         let maxId = 0;
         for (const ws of workspaceGroups.normal)
@@ -99,10 +104,6 @@ StyledRect {
             name,
             monitor
         })
-
-    // Policy decision (Task 1.4):
-    // - Overlay follows fullscreen gating (blocked when fullscreen in Shortcuts/Ipc toggle)
-    // - Rendering scope follows perMonitorWorkspaces for parity with bar workspace UI
 
     property var inFlightByAddress: ({})
     property var hoveredTarget: null
@@ -215,10 +216,18 @@ StyledRect {
     border.width: 1
     border.color: Colours.tPalette.m3outlineVariant
     radius: Tokens.rounding.extraLarge
-    implicitWidth: Math.min(screen.width - Tokens.padding.large * 2, 1360)
-    implicitHeight: Math.min(screen.height - Tokens.padding.large * 2, normalSectionHeight + specialSectionHeight + sectionGap + Tokens.padding.large * 2)
+    implicitWidth: Math.min(screen.width - Tokens.padding.large * 2, 1340)
+    implicitHeight: Math.min(screen.height - Tokens.padding.large * 2, normalSectionHeight + specialSectionHeight + sectionGap + Tokens.padding.large * 2 + 56)
+    focus: true
 
-    Component.onCompleted: Hypr.forceRefreshState()
+    Keys.onEscapePressed: {
+        root.screenState.workspaceOverlay = false;
+    }
+
+    Component.onCompleted: {
+        Hypr.forceRefreshState();
+        root.forceActiveFocus();
+    }
 
     Timer {
         id: reconcileTimer
@@ -236,13 +245,76 @@ StyledRect {
         anchors.margins: Tokens.padding.large
         spacing: root.sectionGap
 
+        // Main Top Header Bar
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Tokens.spacing.medium
+
+            MaterialIcon {
+                text: "grid_view"
+                fontStyle: Tokens.font.icon.large
+                color: Colours.tPalette.m3primary
+            }
+
+            StyledText {
+                text: qsTr("Workspaces")
+                font: Tokens.font.title.builders.medium.weight(Font.Bold).build()
+                color: Colours.tPalette.m3onSurface
+            }
+
+            StyledRect {
+                radius: Tokens.rounding.full
+                color: Colours.tPalette.m3surfaceContainerHigh
+                implicitHeight: 24
+                implicitWidth: totalWinLabel.implicitWidth + 16
+
+                StyledText {
+                    id: totalWinLabel
+
+                    anchors.centerIn: parent
+                    text: qsTr("%1 open windows").arg(root.totalWindowsCount)
+                    font: Tokens.font.label.small
+                    color: Colours.tPalette.m3onSurfaceVariant
+                }
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
+
+            // Close button
+            StyledRect {
+                radius: Tokens.rounding.full
+                color: closeHover.hovered ? Colours.tPalette.m3surfaceContainerHighest : Colours.tPalette.m3surfaceContainerHigh
+                implicitWidth: 32
+                implicitHeight: 32
+
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: "close"
+                    fontStyle: Tokens.font.icon.small
+                    color: Colours.tPalette.m3onSurface
+                }
+
+                HoverHandler {
+                    id: closeHover
+
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    onTapped: root.screenState.workspaceOverlay = false
+                }
+            }
+        }
+
+        // Normal Workspaces Container
         StyledRect {
             id: normalContainer
 
             Layout.fillWidth: true
             Layout.minimumHeight: root.normalSectionHeight
             Layout.preferredHeight: root.normalSectionHeight
-
             radius: Tokens.rounding.large
             color: Colours.tPalette.m3surfaceContainer
             border.width: 1
@@ -256,12 +328,10 @@ StyledRect {
                 spacing: root.sectionGap
 
                 StyledText {
-                    text: qsTr("Workspaces")
+                    text: qsTr("Main Desktops")
                     font: Tokens.font.title.builders.small.weight(Font.Medium).build()
                     color: Colours.tPalette.m3onSurface
                     Layout.fillWidth: true
-                    Layout.topMargin: root.sectionPadding / 2
-                    Layout.bottomMargin: Tokens.spacing.extraSmall
                     elide: Text.ElideRight
                 }
 
@@ -289,6 +359,7 @@ StyledRect {
                             windows: root.windowsByWorkspace[String(modelData.id)] ?? []
                             inFlightByAddress: root.inFlightByAddress
                             hoveredTarget: root.hoveredTarget
+                            screenState: root.screenState
                             setHoveredTarget: target => root.hoveredTarget = target
                             clearHoveredTarget: targetToken => {
                                 if (root.hoveredTarget?.targetToken === targetToken)
@@ -301,13 +372,13 @@ StyledRect {
             }
         }
 
+        // Special Workspaces Container
         StyledRect {
             id: specialContainer
 
             Layout.fillWidth: true
             Layout.minimumHeight: root.specialSectionHeight
             Layout.preferredHeight: root.specialSectionHeight
-
             radius: Tokens.rounding.large
             color: Colours.tPalette.m3surfaceContainer
             border.width: 1
@@ -321,12 +392,10 @@ StyledRect {
                 spacing: root.sectionGap
 
                 StyledText {
-                    text: qsTr("Special workspaces")
+                    text: qsTr("Special Workspaces (Scratchpads)")
                     font: Tokens.font.title.builders.small.weight(Font.Medium).build()
                     color: Colours.tPalette.m3onSurface
                     Layout.fillWidth: true
-                    Layout.topMargin: root.sectionPadding / 2
-                    Layout.bottomMargin: Tokens.spacing.extraSmall
                     elide: Text.ElideRight
                 }
 
@@ -354,6 +423,7 @@ StyledRect {
                             windows: root.windowsByWorkspace[modelData.name] ?? []
                             inFlightByAddress: root.inFlightByAddress
                             hoveredTarget: root.hoveredTarget
+                            screenState: root.screenState
                             setHoveredTarget: target => root.hoveredTarget = target
                             clearHoveredTarget: targetToken => {
                                 if (root.hoveredTarget?.targetToken === targetToken)

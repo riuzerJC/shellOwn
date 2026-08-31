@@ -14,12 +14,14 @@ StyledRect {
     required property var window
     required property string sourceToken
     property string monitorName: ""
-    required property string monitorName
+    property var screenState: null
     required property var onDragCommit
 
     readonly property string address: window?.address ?? ""
     readonly property int sourceWorkspaceId: window?.workspace?.id ?? -1
     readonly property string sourceWorkspaceName: window?.workspace?.name ?? ""
+    readonly property bool isActiveWindow: Hypr.activeToplevel?.address === root.address
+    readonly property string appClass: window?.lastIpcObject?.class || window?.title || qsTr("Window")
 
     readonly property var dragPayload: ({
             address: address,
@@ -34,11 +36,11 @@ StyledRect {
 
     radius: Tokens.rounding.small
     color: dragHandler.active ? Colours.tPalette.m3secondaryContainer : Colours.tPalette.m3surfaceContainerHigh
-    border.width: 1
-    border.color: dragHandler.active ? Colours.tPalette.m3secondary : Colours.tPalette.m3outlineVariant
-
-    implicitHeight: 74
-    implicitWidth: 112
+    border.width: (isActiveWindow || dragHandler.active) ? 2 : 1
+    border.color: isActiveWindow ? Colours.tPalette.m3primary : (dragHandler.active ? Colours.tPalette.m3secondary : Colours.tPalette.m3outlineVariant)
+    clip: true
+    implicitHeight: 70
+    implicitWidth: 104
 
     Drag.active: dragHandler.active
     Drag.source: root
@@ -48,8 +50,8 @@ StyledRect {
 
     x: dragHandler.active ? dragX : 0
     y: dragHandler.active ? dragY : 0
-    z: dragHandler.active ? 20 : 1
-    scale: dragHandler.active ? 0.94 : 1
+    z: dragHandler.active ? 100 : 1
+    scale: dragHandler.active ? 0.92 : (hoverHandler.hovered ? 1.03 : 1.0)
 
     Behavior on scale {
         Anim {
@@ -66,22 +68,21 @@ StyledRect {
         live: true
     }
 
-    Rectangle {
+    // App Class / Title Banner at the bottom
+    StyledRect {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: 1
-        height: 18
-        radius: root.radius - 1
-        color: Qt.alpha(Colours.palette.m3scrim, 0.56)
+        height: 20
+        radius: 0
+        color: Qt.alpha(Colours.palette.m3scrim, 0.72)
 
         StyledText {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
+            anchors.fill: parent
             anchors.leftMargin: Tokens.padding.small
-            anchors.right: parent.right
             anchors.rightMargin: Tokens.padding.small
-            text: root.window?.lastIpcObject?.class || root.window?.title || qsTr("Window")
+            verticalAlignment: Text.AlignVCenter
+            text: root.appClass
             elide: Text.ElideRight
             font: Tokens.font.label.small
             color: Colours.palette.m3onSurface
@@ -96,6 +97,23 @@ StyledRect {
             text: "web_asset_off"
             color: Qt.alpha(Colours.palette.m3onSurfaceVariant, 0.55)
             fontStyle: Tokens.font.icon.large
+        }
+    }
+
+    HoverHandler {
+        id: hoverHandler
+
+        cursorShape: Qt.PointingHandCursor
+    }
+
+    TapHandler {
+        onTapped: {
+            if (root.address) {
+                const cleanAddr = root.address.replace(/^0x/, "");
+                Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ window = "address:0x${cleanAddr}" })` : `focuswindow address:0x${cleanAddr}`);
+                if (root.screenState)
+                    root.screenState.workspaceOverlay = false;
+            }
         }
     }
 

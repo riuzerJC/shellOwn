@@ -14,7 +14,7 @@ Singleton {
     readonly property var toplevels: Hyprland.toplevels
     readonly property var workspaces: Hyprland.workspaces
     readonly property var monitors: Hyprland.monitors
-    readonly property bool usingLua: Hyprland.usingLua
+    property bool usingLua: true
 
     readonly property HyprlandToplevel activeToplevel: {
         const t = Hyprland.activeToplevel;
@@ -74,16 +74,25 @@ Singleton {
         return /^[0-9a-f]+$/.test(cleaned) ? cleaned : "";
     }
 
-    function moveWindowToWorkspace(address: string, target: var): bool {
-        const token = workspaceTargetToken(target);
-        const normalizedAddress = normalizeWindowAddress(address);
+        function moveWindowToWorkspace(address: string, target: var): bool {
+            const token = workspaceTargetToken(target);
+            const normalizedAddress = normalizeWindowAddress(address);
 
-        if (!token || !normalizedAddress)
-            return false;
+            if (!token || !normalizedAddress)
+                return false;
 
-        dispatch(`movetoworkspacesilent ${token},address:0x${normalizedAddress}`);
-        return true;
-    }
+            if (usingLua) {
+                if (token.startsWith("special:"))
+                    dispatch(`hl.dsp.window.move({ window = "address:0x${normalizedAddress}", workspace = "${token}" })`);
+                else
+                    dispatch(`hl.dsp.window.move({ window = "address:0x${normalizedAddress}", workspace = ${Number(token) || 1} })`);
+            } else {
+                dispatch(`movetoworkspacesilent ${token},address:0x${normalizedAddress}`);
+            }
+
+            forceRefreshState();
+            return true;
+        }
 
     function forceRefreshState(): void {
         Hyprland.refreshToplevels();
