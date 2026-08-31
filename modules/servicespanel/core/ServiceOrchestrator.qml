@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell.Io
+import Caelestia
 import Caelestia.Config
 import qs.services
 import qs.utils
@@ -82,9 +83,9 @@ QtObject {
         return search.trim();
     }
 
-    function emitToast(title: string, message: string, icon: string): void {
+    function emitToast(title: string, message: string, icon: string, toastType: int = Toast.Info): void {
         if (typeof Toaster !== "undefined" && Toaster?.toast)
-            Toaster.toast(title, message, icon);
+            Toaster.toast(title, message, icon, toastType, 4000);
         else
             console.warn(`[services.panel] ${title}: ${message}`);
     }
@@ -453,7 +454,7 @@ QtObject {
             if (!actionResult.ok) {
                 entry.busy = false;
                 entry.lastError = actionResult.message;
-                emitToast(qsTr("Failed to %1 %2").arg(actionName).arg(entry.name), actionResult.message, "error");
+                emitToast(qsTr("Failed to %1 %2").arg(actionName).arg(entry.name), actionResult.message, "error", Toast.Error);
                 return;
             }
 
@@ -467,7 +468,10 @@ QtObject {
                     const expectedState = actionName === "start" ? "running" : "stopped";
                     if (verifyResult.ok && verifyResult.state === expectedState) {
                         entry.lastError = "";
-                        emitToast(qsTr("%1 %2").arg(entry.name).arg(successSuffix), qsTr("Service status confirmed."), "check_circle");
+                        const successTitle = actionName === "start" ? qsTr("%1 Started").arg(entry.name) : qsTr("%1 Stopped").arg(entry.name);
+                        const successDesc = actionName === "start" ? qsTr("Service is now running successfully.") : qsTr("Service has been stopped.");
+                        const successIcon = actionName === "start" ? "check_circle" : "stop_circle";
+                        emitToast(successTitle, successDesc, successIcon, actionName === "start" ? Toast.Success : Toast.Info);
                         return;
                     }
 

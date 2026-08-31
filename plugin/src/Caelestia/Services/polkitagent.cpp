@@ -1,9 +1,10 @@
 #include "polkitagent.hpp"
 
-#include <unistd.h>
 #include <qloggingcategory.h>
-#include <polkitqt1-subject.h>
+
 #include <polkitqt1-identity.h>
+#include <polkitqt1-subject.h>
+#include <unistd.h>
 
 Q_LOGGING_CATEGORY(lcPolkit, "caelestia.services.polkit", QtInfoMsg)
 
@@ -24,13 +25,8 @@ PolkitAgent::~PolkitAgent() {
     cleanupSession();
 }
 
-void PolkitAgent::initiateAuthentication(
-    const QString& actionId,
-    const QString& message,
-    const QString& iconName,
-    const PolkitQt1::Details& /*details*/,
-    const QString& cookie,
-    const PolkitQt1::Identity::List& identities,
+void PolkitAgent::initiateAuthentication(const QString& actionId, const QString& message, const QString& iconName,
+    const PolkitQt1::Details& /*details*/, const QString& cookie, const PolkitQt1::Identity::List& identities,
     PolkitQt1::Agent::AsyncResult* result) {
     cleanupSession();
 
@@ -151,4 +147,4 @@ void PolkitAgent::cleanupSession() {
     emit busyChanged();
 }
 
-}
+} // namespace caelestia::services
