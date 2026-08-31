@@ -53,10 +53,10 @@ class ServiceConfig : public settings::ObjectNode {
                                          { u"stop"_s, true },
                                      }) },
                 { u"params"_s, vmap({
-                                    { u"probeMode"_s, u"cli-only"_s },
-                                    { u"startCommandPreference"_s, QStringList{ u"systemctl"_s } },
-                                    { u"stopCommandPreference"_s, QStringList{ u"systemctl"_s } },
-                                }) },
+                                   { u"probeMode"_s, u"cli-only"_s },
+                                   { u"startCommandPreference"_s, QStringList{ u"systemctl"_s } },
+                                   { u"stopCommandPreference"_s, QStringList{ u"systemctl"_s } },
+                               }) },
             }),
             vmap({
                 { u"id"_s, u"network-manager"_s },
@@ -70,8 +70,8 @@ class ServiceConfig : public settings::ObjectNode {
                                          { u"stop"_s, true },
                                      }) },
                 { u"params"_s, vmap({
-                                    { u"unit"_s, u"NetworkManager.service"_s },
-                                }) },
+                                   { u"unit"_s, u"NetworkManager.service"_s },
+                               }) },
             }),
             vmap({
                 { u"id"_s, u"bluetooth"_s },
@@ -85,8 +85,8 @@ class ServiceConfig : public settings::ObjectNode {
                                          { u"stop"_s, true },
                                      }) },
                 { u"params"_s, vmap({
-                                    { u"unit"_s, u"bluetooth.service"_s },
-                                }) },
+                                   { u"unit"_s, u"bluetooth.service"_s },
+                               }) },
             }),
         }))
 };
