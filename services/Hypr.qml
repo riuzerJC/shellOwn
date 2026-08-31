@@ -29,7 +29,12 @@ Singleton {
     readonly property bool numLock: keyboard?.numLock ?? false
     readonly property string defaultKbLayout: keyboard?.layout.split(",")[0] ?? "??"
     readonly property string kbLayoutFull: keyboard?.activeKeymap ?? "Unknown"
-    readonly property string kbLayout: kbMap.get(kbLayoutFull) ?? "??"
+        readonly property string kbLayout: {
+            const raw = (kbMap.get(kbLayoutFull) ?? defaultKbLayout ?? "??").toLowerCase();
+            if (raw === "latam")
+                return "es";
+            return raw.length > 2 ? raw.slice(0, 2) : raw;
+        }
     readonly property var kbMap: new Map()
 
     readonly property alias extras: extras

@@ -79,14 +79,14 @@ StyledRect {
     implicitWidth: tileWidth
 
     Behavior on color {
-        CAnim {
-            duration: Tokens.anim.durations.short
+        ColorAnimation {
+            duration: 150
         }
     }
 
     Behavior on border.color {
-        CAnim {
-            duration: Tokens.anim.durations.short
+        ColorAnimation {
+            duration: 150
         }
     }
 
