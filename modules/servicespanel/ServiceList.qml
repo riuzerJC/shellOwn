@@ -15,17 +15,11 @@ StyledListView {
 
     required property StyledTextField search
 
-    model: ScriptModel {
-        id: model
-
-        values: ServiceOrchestrator.query(root.search.text)
-        onValuesChanged: root.currentIndex = 0
-    }
-
+    model: ServiceOrchestrator.query(root.search.text)
     spacing: Tokens.spacing.small
     orientation: Qt.Vertical
-    implicitWidth: Tokens.sizes.launcher.itemWidth
-    implicitHeight: Math.min((Tokens.sizes.launcher.itemHeight + spacing) * Math.min(7, count) - spacing, 420)
+    implicitWidth: 460
+    implicitHeight: Math.min(Math.max((64 + spacing) * Math.min(6, count) - spacing, 180), 480)
 
     preferredHighlightBegin: 0
     preferredHighlightEnd: height
@@ -33,9 +27,9 @@ StyledListView {
     highlightFollowsCurrentItem: false
 
     highlight: StyledRect {
-        radius: Tokens.rounding.large
-        color: Colours.palette.m3onSurface
-        opacity: 0.08
+        radius: Tokens.rounding.medium
+        color: Colours.tPalette.m3primary
+        opacity: 0.12
 
         y: root.currentItem?.y ?? 0
         implicitWidth: root.width

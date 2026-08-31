@@ -41,8 +41,10 @@ Item {
     StyledRect {
         id: searchWrapper
 
-        color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+        color: Colours.layer(Colours.tPalette.m3surfaceContainer, 2)
         radius: Tokens.rounding.full
+        border.width: 1
+        border.color: Colours.tPalette.m3outlineVariant
 
         anchors.left: parent.left
         anchors.right: parent.right
@@ -59,7 +61,8 @@ Item {
             anchors.leftMargin: root.padding
 
             text: "deployed_code"
-            color: Colours.palette.m3onSurfaceVariant
+            fontStyle: Tokens.font.icon.medium
+            color: Colours.tPalette.m3onSurfaceVariant
         }
 
         StyledTextField {
@@ -70,10 +73,10 @@ Item {
             anchors.leftMargin: Tokens.spacing.small
             anchors.rightMargin: Tokens.spacing.small
 
-            topPadding: Tokens.padding.large
-            bottomPadding: Tokens.padding.large
+            topPadding: Tokens.padding.medium
+            bottomPadding: Tokens.padding.medium
 
-            placeholderText: qsTr("Search services")
+            placeholderText: qsTr("Search services…")
 
             onAccepted: list.currentItem?.triggerPrimaryAction()
 
@@ -103,7 +106,8 @@ Item {
             anchors.rightMargin: root.padding
 
             text: "refresh"
-            color: reloadMouse.pressed ? Qt.alpha(Colours.palette.m3onSurfaceVariant, 0.7) : Colours.palette.m3onSurfaceVariant
+            fontStyle: Tokens.font.icon.medium
+            color: reloadMouse.pressed ? Qt.alpha(Colours.tPalette.m3onSurfaceVariant, 0.7) : Colours.tPalette.m3onSurfaceVariant
 
             MouseArea {
                 id: reloadMouse

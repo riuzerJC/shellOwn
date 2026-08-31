@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -34,6 +36,10 @@ QtObject {
         return unit.includes(".") ? unit : `${unit}.service`;
     }
 
+    function isUserUnit(serviceConfig: var): bool {
+        return serviceConfig?.params?.userUnit === true || serviceConfig?.params?.user === true;
+    }
+
     function probe(serviceConfig: var, callback: var): void {
         const unit = resolveUnit(serviceConfig);
         if (!unit) {
@@ -46,7 +52,10 @@ QtObject {
             return;
         }
 
-        runCommand(["systemctl", "is-active", unit], result => {
+        const isUser = isUserUnit(serviceConfig);
+        const command = isUser ? ["systemctl", "--user", "is-active", unit] : ["systemctl", "is-active", unit];
+
+        runCommand(command, result => {
             const output = `${result.output ?? ""}\n${result.error ?? ""}`.toLowerCase();
             if (result.success && output.includes("active")) {
                 callback({
@@ -96,7 +105,16 @@ QtObject {
             return;
         }
 
-        const command = serviceConfig?.params?.noPkexec === true ? ["systemctl", action, unit] : ["pkexec", "systemctl", action, unit];
+        const isUser = isUserUnit(serviceConfig);
+        let command = [];
+        if (isUser) {
+            command = ["systemctl", "--user", action, unit];
+        } else if (serviceConfig?.params?.noPkexec === true) {
+            command = ["systemctl", action, unit];
+        } else {
+            command = ["pkexec", "systemctl", action, unit];
+        }
+
         runCommand(command, result => {
             if (result.success) {
                 callback({
@@ -138,32 +156,29 @@ QtObject {
 
     component CommandProcess: Process {
         property list<string> cmdArgs: []
-        property var callback: null
+        property var callback
 
         signal processFinished
 
-        environment: ({
-                LANG: "C.UTF-8",
-                LC_ALL: "C.UTF-8"
-            })
+        stdout: StdioCollector {
+            id: stdoutCollector
+        }
 
-        stdout: StdioCollector { id: stdoutCollector }
-        stderr: StdioCollector { id: stderrCollector }
+        stderr: StdioCollector {
+            id: stderrCollector
+        }
 
-        onExited: code => {
-            if (callback) {
+        onExited: exitCode => {
+            if (callback)
                 callback({
-                    success: code === 0,
-                    exitCode: code,
-                    output: (stdoutCollector?.text ?? "").trim(),
-                    error: (stderrCollector?.text ?? "").trim()
+                    success: exitCode === 0,
+                    exitCode,
+                    output: stdoutCollector.value,
+                    error: stderrCollector.value
                 });
-            }
             processFinished();
         }
     }
 
-    readonly property Component commandProcessFactory: Component {
-        CommandProcess {}
-    }
+    readonly property Component commandProcessFactory: Component { CommandProcess {} }
 }
