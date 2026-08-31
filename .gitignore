@@ -7,3 +7,7 @@ build/
 logs
 .codegraph/
 compile_commands.json
+graphify-out/
+.graphify/
+.codebase/
+.codebase-memory/
