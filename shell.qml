@@ -9,6 +9,7 @@ import "modules/drawers"
 import "modules/background"
 import "modules/areapicker"
 import "modules/lock"
+import "modules/polkit"
 import QtQuick
 import Quickshell
 import qs.services
@@ -39,4 +40,5 @@ ShellRoot {
     IdleMonitors {
         lock: lock
     }
+    Polkit {}
 }

@@ -21,12 +21,14 @@ qml_module(caelestia-services
         networkusage.cpp
         hyprdevices.cpp
         hyprextras.cpp
+        polkitagent.cpp
     LIBRARIES
         Qt::DBus
         Qt::Network
         PkgConfig::Pipewire
         PkgConfig::Aubio
         PkgConfig::Cava
+        PkgConfig::PolkitQt6
         Sensors::Sensors
         caelestia-core
         caelestia-config
