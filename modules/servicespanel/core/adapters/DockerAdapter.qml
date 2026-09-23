@@ -11,6 +11,7 @@ QtObject {
     property bool canStart: true
     property bool canStop: true
     property list<QtObject> activeProcesses: []
+    readonly property int commandStartTimeoutMs: 3000
 
     function normalizeError(rawResult: var): var {
         if (!rawResult)
@@ -275,12 +276,34 @@ QtObject {
         return command.join(" ");
     }
 
+    function reapUnstartedCommands(): void {
+        if (activeProcesses.length === 0)
+            return;
+
+        const now = Date.now();
+        for (const proc of activeProcesses.slice()) {
+            if (proc.startedFlag || now - proc.queuedAt < root.commandStartTimeoutMs)
+                continue;
+
+            proc.finish(-1, "", Tr.tr("Command did not start."));
+        }
+    }
+
+    readonly property Timer startWatchdog: Timer {
+        interval: 1000
+        repeat: true
+        running: true
+
+        onTriggered: root.reapUnstartedCommands()
+    }
+
     function runCommand(command: var, callback: var): void {
         const proc = commandProcessFactory.createObject(root, {
             cmdArgs: command,
             callback: callback
         });
         activeProcesses.push(proc);
+        proc.queuedAt = Date.now();
 
         proc.processFinished.connect(() => {
             const idx = activeProcesses.indexOf(proc);
@@ -300,8 +323,28 @@ QtObject {
 
         property list<string> cmdArgs: []
         property var callback: null
+        property bool startedFlag: false
+        property double queuedAt: 0
+        property bool finished: false
 
         signal processFinished
+
+        function finish(exitCode: int, output: string, error: string): void {
+            if (finished)
+                return;
+
+            finished = true;
+            if (callback)
+                callback({
+                    success: exitCode === 0,
+                    exitCode,
+                    output,
+                    error
+                });
+            processFinished();
+        }
+
+        onStarted: startedFlag = true
 
         environment: ({
                 LANG: "C.UTF-8",
@@ -316,21 +359,7 @@ QtObject {
             id: stderrCollector
         }
 
-        onExited: code => { // qmllint disable signal-handler-parameters
-            const output = stdoutCollector?.text ?? "";
-            const error = stderrCollector?.text ?? "";
-
-            if (callback) {
-                callback({
-                    success: code === 0,
-                    exitCode: code,
-                    output: output.trim(),
-                    error: error.trim()
-                });
-            }
-
-            processFinished();
-        }
+        onExited: code => process.finish(code, (stdoutCollector?.text ?? "").trim(), (stderrCollector?.text ?? "").trim())
     }
 
     readonly property Component commandProcessFactory: Component {

@@ -13,6 +13,7 @@ QtObject {
     property bool canStart: true
     property bool canStop: true
     property list<QtObject> activeProcesses: []
+    readonly property int commandStartTimeoutMs: 3000
 
     function normalizeError(rawResult: var): var {
         if (!rawResult)
@@ -145,12 +146,34 @@ QtObject {
         });
     }
 
+    function reapUnstartedCommands(): void {
+        if (activeProcesses.length === 0)
+            return;
+
+        const now = Date.now();
+        for (const proc of activeProcesses.slice()) {
+            if (proc.startedFlag || now - proc.queuedAt < root.commandStartTimeoutMs)
+                continue;
+
+            proc.finish(-1, "", Tr.tr("Command did not start."));
+        }
+    }
+
+    readonly property Timer startWatchdog: Timer {
+        interval: 1000
+        repeat: true
+        running: true
+
+        onTriggered: root.reapUnstartedCommands()
+    }
+
     function runCommand(command: var, callback: var): void {
         const proc = commandProcessFactory.createObject(root, {
             cmdArgs: command,
             callback
         });
         activeProcesses.push(proc);
+        proc.queuedAt = Date.now();
 
         proc.processFinished.connect(() => {
             const idx = activeProcesses.indexOf(proc);
@@ -166,10 +189,32 @@ QtObject {
     }
 
     component CommandProcess: Process {
+        id: process
+
         property list<string> cmdArgs: []
         property var callback
+        property bool startedFlag: false
+        property double queuedAt: 0
+        property bool finished: false
 
         signal processFinished
+
+        function finish(exitCode: int, output: string, error: string): void {
+            if (finished)
+                return;
+
+            finished = true;
+            if (callback)
+                callback({
+                    success: exitCode === 0,
+                    exitCode,
+                    output,
+                    error
+                });
+            processFinished();
+        }
+
+        onStarted: startedFlag = true
 
         stdout: StdioCollector {
             id: stdoutCollector
@@ -179,16 +224,7 @@ QtObject {
             id: stderrCollector
         }
 
-        onExited: exitCode => {
-            if (callback)
-                callback({
-                    success: exitCode === 0,
-                    exitCode,
-                    output: (stdoutCollector?.text ?? "").trim(),
-                    error: (stderrCollector?.text ?? "").trim()
-                });
-            processFinished();
-        }
+        onExited: exitCode => process.finish(exitCode, (stdoutCollector?.text ?? "").trim(), (stderrCollector?.text ?? "").trim())
     }
 
     readonly property Component commandProcessFactory: Component { CommandProcess {} }

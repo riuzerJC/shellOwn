@@ -72,9 +72,18 @@ rebuilt and restarted on 2026-09-23.
       `modules/workspaceoverlay/{Content,WindowChip,WorkspaceTarget}.qml`); a repo-wide
       `scripts/trs-check.py` run will flag them. Out of scope here.
       Commit: pending.
-- [ ] 7. Update `docs/services-panel.example.json` for `iconFont`, the new params and the
-      `failed` state.
-- [ ] 8. End-to-end verification: `trs-check` + `qmllint` clean, live panel screenshot, close
+- [x] 7. Add a command start watchdog to both adapters. Quickshell never emits `exited` when a
+      binary cannot be found, so any probe candidate that may not exist (`docker info`, `service`)
+      would leave an entry `probeInFlight` forever with a stuck `Checking…` row. A 1 s sweep now
+      delivers one failure (`exitCode -1`, `Command did not start.`) after
+      `commandStartTimeoutMs` (3000 ms) for processes that never emitted `started`; `finish()` is
+      guarded so a command reports exactly once.
+      Evidence: isolated harness — live docker/systemd probes still resolve, and
+      `runCommand(["definitely-not-a-real-binary-xyz"])` reports failure after 3.0-4.0 s.
+      Commit: pending.
+- [ ] 8. Update `docs/services-panel.example.json` and the *Services panel* README section for
+      `iconFont`, the adapter params and the `failed` state.
+- [ ] 9. End-to-end verification: `trs-check` + `qmllint` clean, live panel screenshot, close
       the remaining work units.
 
 ## Deviation from the original plan
