@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.services
 import qs.utils
@@ -21,7 +22,7 @@ StyledRect {
     readonly property int sourceWorkspaceId: window?.workspace?.id ?? -1
     readonly property string sourceWorkspaceName: window?.workspace?.name ?? ""
     readonly property bool isActiveWindow: Hypr.activeToplevel?.address === root.address
-    readonly property string appClass: window?.lastIpcObject?.class || window?.title || qsTr("Window")
+    readonly property string appClass: window?.lastIpcObject?.class || window?.title || Tr.tr("Window")
 
     readonly property var dragPayload: ({
             address: address,

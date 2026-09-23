@@ -45,7 +45,7 @@ Item {
             {
                 component: subscriptionsComponent,
                 iconName: "subscriptions",
-                text: qsTr("Subscriptions"),
+                text: Tr.tr("Subscriptions"),
                 enabled: Config.dashboard.showSubscriptions
             }
         ];

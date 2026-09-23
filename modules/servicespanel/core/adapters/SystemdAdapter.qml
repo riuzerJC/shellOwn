@@ -3,28 +3,30 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Caelestia.I18n
 
 QtObject {
     id: root
 
     property string adapterId: "systemd"
-    property string displayName: qsTr("Systemd")
+    property string displayName: Tr.tr("Systemd")
     property bool canStart: true
     property bool canStop: true
     property list<QtObject> activeProcesses: []
+    readonly property int commandStartTimeoutMs: 3000
 
     function normalizeError(rawResult: var): var {
         if (!rawResult)
             return {
                 ok: false,
-                message: qsTr("Service command failed."),
+                message: Tr.tr("Service command failed."),
                 detail: ""
             };
 
         return {
             ok: rawResult.ok ?? rawResult.success ?? false,
             state: rawResult.state ?? "unknown",
-            message: rawResult.message ?? rawResult.error ?? qsTr("Service command failed."),
+            message: rawResult.message ?? rawResult.error ?? Tr.tr("Service command failed."),
             detail: rawResult.detail ?? rawResult.output ?? ""
         };
     }
@@ -46,7 +48,7 @@ QtObject {
             callback({
                 ok: false,
                 state: "unknown",
-                message: qsTr("Missing systemd unit in service mapping."),
+                message: Tr.tr("Missing systemd unit in service mapping."),
                 detail: ""
             });
             return;
@@ -57,21 +59,31 @@ QtObject {
 
         runCommand(command, result => {
             const output = `${result.output ?? ""}\n${result.error ?? ""}`.toLowerCase();
-            if (result.success && output.includes("active")) {
+            if (output.includes("failed")) {
                 callback({
                     ok: true,
-                    state: "running",
-                    message: qsTr("Service is running."),
+                    state: "failed",
+                    message: Tr.tr("Service has failed."),
                     detail: output.trim()
                 });
                 return;
             }
 
-            if (output.includes("inactive") || output.includes("failed") || output.includes("dead")) {
+            if (result.success && output.includes("active")) {
+                callback({
+                    ok: true,
+                    state: "running",
+                    message: Tr.tr("Service is running."),
+                    detail: output.trim()
+                });
+                return;
+            }
+
+            if (output.includes("inactive") || output.includes("dead")) {
                 callback({
                     ok: true,
                     state: "stopped",
-                    message: qsTr("Service is stopped."),
+                    message: Tr.tr("Service is stopped."),
                     detail: output.trim()
                 });
                 return;
@@ -80,7 +92,7 @@ QtObject {
             callback({
                 ok: false,
                 state: "unknown",
-                message: qsTr("Unable to determine service status."),
+                message: Tr.tr("Unable to determine service status."),
                 detail: output.trim()
             });
         });
@@ -99,7 +111,7 @@ QtObject {
         if (!unit) {
             callback({
                 ok: false,
-                message: qsTr("Missing systemd unit in service mapping."),
+                message: Tr.tr("Missing systemd unit in service mapping."),
                 detail: ""
             });
             return;
@@ -119,19 +131,40 @@ QtObject {
             if (result.success) {
                 callback({
                     ok: true,
-                    message: qsTr("Service %1 command executed.").arg(action),
+                    message: Tr.tr("Service %1 command executed.").arg(action),
                     detail: result.output ?? ""
                 });
                 return;
             }
 
-            const detail = result.error || result.output || qsTr("No output");
+            const detail = result.error || result.output || Tr.tr("No output");
             callback({
                 ok: false,
-                message: qsTr("Failed to %1 service.").arg(action),
+                message: Tr.tr("Failed to %1 service.").arg(action),
                 detail
             });
         });
+    }
+
+    function reapUnstartedCommands(): void {
+        if (activeProcesses.length === 0)
+            return;
+
+        const now = Date.now();
+        for (const proc of activeProcesses.slice()) {
+            if (proc.startedFlag || now - proc.queuedAt < root.commandStartTimeoutMs)
+                continue;
+
+            proc.finish(-1, "", Tr.tr("Command did not start."));
+        }
+    }
+
+    readonly property Timer startWatchdog: Timer {
+        interval: 1000
+        repeat: true
+        running: true
+
+        onTriggered: root.reapUnstartedCommands()
     }
 
     function runCommand(command: var, callback: var): void {
@@ -140,6 +173,7 @@ QtObject {
             callback
         });
         activeProcesses.push(proc);
+        proc.queuedAt = Date.now();
 
         proc.processFinished.connect(() => {
             const idx = activeProcesses.indexOf(proc);
@@ -155,10 +189,32 @@ QtObject {
     }
 
     component CommandProcess: Process {
+        id: process
+
         property list<string> cmdArgs: []
         property var callback
+        property bool startedFlag: false
+        property double queuedAt: 0
+        property bool finished: false
 
         signal processFinished
+
+        function finish(exitCode: int, output: string, error: string): void {
+            if (finished)
+                return;
+
+            finished = true;
+            if (callback)
+                callback({
+                    success: exitCode === 0,
+                    exitCode,
+                    output,
+                    error
+                });
+            processFinished();
+        }
+
+        onStarted: startedFlag = true
 
         stdout: StdioCollector {
             id: stdoutCollector
@@ -168,16 +224,7 @@ QtObject {
             id: stderrCollector
         }
 
-        onExited: exitCode => {
-            if (callback)
-                callback({
-                    success: exitCode === 0,
-                    exitCode,
-                    output: stdoutCollector.value,
-                    error: stderrCollector.value
-                });
-            processFinished();
-        }
+        onExited: exitCode => process.finish(exitCode, (stdoutCollector?.text ?? "").trim(), (stderrCollector?.text ?? "").trim())
     }
 
     readonly property Component commandProcessFactory: Component { CommandProcess {} }

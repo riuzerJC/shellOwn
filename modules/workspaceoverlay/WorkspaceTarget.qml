@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.services
 
@@ -130,7 +131,7 @@ StyledRect {
 
             StyledText {
                 Layout.fillWidth: true
-                text: root.isSpecial ? root.cleanSpecialName : qsTr("Workspace %1").arg(root.wsId)
+                text: root.isSpecial ? root.cleanSpecialName : Tr.tr("Workspace %1").arg(root.wsId)
                 font: Tokens.font.body.builders.medium.weight(Font.Medium).build()
                 color: root.isActiveWs ? Colours.tPalette.m3primary : Colours.tPalette.m3onSurface
                 elide: Text.ElideRight
@@ -147,14 +148,14 @@ StyledRect {
                     id: activeText
 
                     anchors.centerIn: parent
-                    text: qsTr("Active")
+                    text: Tr.tr("Active")
                     font: Tokens.font.label.small
                     color: Colours.tPalette.m3onPrimary
                 }
             }
 
             StyledText {
-                text: qsTr("%1").arg(root.windows.length)
+                text: Tr.tr("%1").arg(root.windows.length)
                 color: Colours.tPalette.m3onSurfaceVariant
                 font: Tokens.font.label.small
             }
@@ -217,7 +218,7 @@ StyledRect {
                 required property string modelData
 
                 visible: root.inFlightByAddress[modelData]?.targetToken === root.targetToken
-                text: qsTr("Moving window…")
+                text: Tr.tr("Moving window…")
                 color: Colours.tPalette.m3primary
                 font: Tokens.font.label.small
             }

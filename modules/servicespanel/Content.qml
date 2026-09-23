@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.services
@@ -76,7 +77,7 @@ Item {
             topPadding: Tokens.padding.medium
             bottomPadding: Tokens.padding.medium
 
-            placeholderText: qsTr("Search services…")
+            placeholderText: Tr.tr("Search services…")
 
             onAccepted: list.currentItem?.triggerPrimaryAction()
 

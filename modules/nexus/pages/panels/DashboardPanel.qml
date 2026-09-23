@@ -78,7 +78,7 @@ PageBase {
 
         ToggleRow {
             last: true
-            text: qsTr("Subscriptions")
+            text: Tr.tr("Subscriptions")
             checked: Config.dashboard.showSubscriptions
             onToggled: GlobalConfig.dashboard.showSubscriptions = checked
         }
