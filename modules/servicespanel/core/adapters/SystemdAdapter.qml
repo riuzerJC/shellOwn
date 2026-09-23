@@ -173,8 +173,8 @@ QtObject {
                 callback({
                     success: exitCode === 0,
                     exitCode,
-                    output: stdoutCollector.value,
-                    error: stderrCollector.value
+                    output: (stdoutCollector?.text ?? "").trim(),
+                    error: (stderrCollector?.text ?? "").trim()
                 });
             processFinished();
         }
