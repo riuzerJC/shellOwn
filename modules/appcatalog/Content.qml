@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.services
@@ -19,9 +20,9 @@ Item {
     readonly property int padding: Tokens.padding.large
     readonly property int cardWidth: 620
     readonly property var statusLabels: ({
-            installed: qsTr("Installed"),
-            missing: qsTr("Missing"),
-            unknown: Catalog.resolvingInstalled ? qsTr("Checking") : qsTr("Unknown")
+            installed: Tr.tr("Installed"),
+            missing: Tr.tr("Missing"),
+            unknown: Catalog.resolvingInstalled ? Tr.tr("Checking") : Tr.tr("Unknown")
         })
     readonly property var typeFilters: ["all", "gui", "tui", "cli"]
     readonly property var statusFilters: ["all", "installed", "missing"]
@@ -90,14 +91,14 @@ Item {
 
                     StyledText {
                         Layout.fillWidth: true
-                        text: qsTr("Apps & TUIs")
+                        text: Tr.tr("Apps & TUIs")
                         font: Tokens.font.title.large
                         color: Colours.palette.m3onSurface
                     }
 
                     StyledText {
                         Layout.fillWidth: true
-                        text: qsTr("Curated applications and terminal tools")
+                        text: Tr.tr("Curated applications and terminal tools")
                         font: Tokens.font.body.medium
                         color: Colours.palette.m3onSurfaceVariant
                         wrapMode: Text.WordWrap
@@ -117,7 +118,7 @@ Item {
                 id: search
 
                 Layout.fillWidth: true
-                placeholderText: qsTr("Search apps, tools, tags, or packages")
+                placeholderText: Tr.tr("Search apps, tools, tags, or packages")
                 leadingIcon: "search"
                 type: StyledTextField.Filled
 
@@ -147,7 +148,7 @@ Item {
                     model: root.typeFilters
                     delegate: TextButton {
                         required property string modelData
-                        text: modelData === "all" ? qsTr("All") : modelData.toUpperCase()
+                        text: modelData === "all" ? Tr.tr("All") : modelData.toUpperCase()
                         isToggle: true
                         checked: Catalog.typeFilter === modelData
                         type: TextButton.Tonal
@@ -159,7 +160,7 @@ Item {
                     model: root.statusFilters
                     delegate: TextButton {
                         required property string modelData
-                        text: modelData === "all" ? qsTr("Any status") : root.statusLabels[modelData]
+                        text: modelData === "all" ? Tr.tr("Any status") : root.statusLabels[modelData]
                         isToggle: true
                         checked: Catalog.statusFilter === modelData
                         type: TextButton.Tonal
@@ -195,7 +196,7 @@ Item {
                         width: catalogList.width
                         padding: root.padding
                         visible: Catalog.loaded && Catalog.filteredEntries.length === 0
-                        text: Catalog.entries.length === 0 ? qsTr("No catalog entries are available.") : qsTr("No entries match the current search or filters.")
+                        text: Catalog.entries.length === 0 ? Tr.tr("No catalog entries are available.") : Tr.tr("No entries match the current search or filters.")
                         color: Colours.palette.m3onSurfaceVariant
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
@@ -206,7 +207,7 @@ Item {
             StyledText {
                 Layout.fillWidth: true
                 visible: Catalog.warningText || Catalog.errorText || Catalog.invalidCount > 0
-                text: Catalog.errorText || Catalog.warningText || qsTr("%1 invalid catalog entries were skipped.").arg(Catalog.invalidCount)
+                text: Catalog.errorText || Catalog.warningText || Tr.tr("%1 invalid catalog entries were skipped.").arg(Catalog.invalidCount)
                 color: Catalog.errorText ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
                 font: Tokens.font.label.small
                 wrapMode: Text.WordWrap
@@ -295,7 +296,7 @@ Item {
                     }
 
                     StyledText {
-                        text: root.statusLabels[status] ?? qsTr("Unknown")
+                        text: root.statusLabels[status] ?? Tr.tr("Unknown")
                         font: Tokens.font.label.small
                         color: status === "missing" ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
                     }

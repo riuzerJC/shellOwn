@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import Quickshell
 import Caelestia
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.services
@@ -140,7 +141,7 @@ StyledRect {
     }
 
     function warnMoveFailure(address: string): void {
-        Toaster.toast(qsTr("Workspace move pending"), qsTr("Could not confirm move for 0x%1 yet. State was refreshed.").arg(address), "warning");
+        Toaster.toast(Tr.tr("Workspace move pending"), Tr.tr("Could not confirm move for 0x%1 yet. State was refreshed.").arg(address), "warning");
     }
 
     function onDropWindow(payload: var, target: var): void {
@@ -164,7 +165,7 @@ StyledRect {
 
         if (!moved) {
             clearInFlight(normalizedAddress);
-            Toaster.toast(qsTr("Invalid move target"), qsTr("The selected workspace target is not valid."), "warning");
+            Toaster.toast(Tr.tr("Invalid move target"), Tr.tr("The selected workspace target is not valid."), "warning");
             return;
         }
 
@@ -257,7 +258,7 @@ StyledRect {
             }
 
             StyledText {
-                text: qsTr("Workspaces")
+                text: Tr.tr("Workspaces")
                 font: Tokens.font.title.builders.medium.weight(Font.Bold).build()
                 color: Colours.tPalette.m3onSurface
             }
@@ -272,7 +273,7 @@ StyledRect {
                     id: totalWinLabel
 
                     anchors.centerIn: parent
-                    text: qsTr("%1 open windows").arg(root.totalWindowsCount)
+                    text: Tr.tr("%1 open windows").arg(root.totalWindowsCount)
                     font: Tokens.font.label.small
                     color: Colours.tPalette.m3onSurfaceVariant
                 }
@@ -328,7 +329,7 @@ StyledRect {
                 spacing: root.sectionGap
 
                 StyledText {
-                    text: qsTr("Main Desktops")
+                    text: Tr.tr("Main Desktops")
                     font: Tokens.font.title.builders.small.weight(Font.Medium).build()
                     color: Colours.tPalette.m3onSurface
                     Layout.fillWidth: true
@@ -392,7 +393,7 @@ StyledRect {
                 spacing: root.sectionGap
 
                 StyledText {
-                    text: qsTr("Special Workspaces (Scratchpads)")
+                    text: Tr.tr("Special Workspaces (Scratchpads)")
                     font: Tokens.font.title.builders.small.weight(Font.Medium).build()
                     color: Colours.tPalette.m3onSurface
                     Layout.fillWidth: true

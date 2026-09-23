@@ -6,6 +6,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Wayland
 import Caelestia.Config
+import Caelestia.I18n
 import Caelestia.Services
 import qs.components
 import qs.components.controls
@@ -109,7 +110,7 @@ PanelWindow {
 
                     StyledText {
                         Layout.fillWidth: true
-                        text: qsTr("Authentication Required")
+                        text: Tr.tr("Authentication Required")
                         font: Tokens.font.title.builders.small.weight(Font.Bold).build()
                         color: Colours.tPalette.m3onSurface
                         elide: Text.ElideRight
@@ -117,7 +118,7 @@ PanelWindow {
 
                     StyledText {
                         Layout.fillWidth: true
-                        text: PolkitAgent.identity ? qsTr("Authenticating as %1").arg(PolkitAgent.identity) : qsTr("Administrative privileges required")
+                        text: PolkitAgent.identity ? Tr.tr("Authenticating as %1").arg(PolkitAgent.identity) : Tr.tr("Administrative privileges required")
                         font: Tokens.font.label.small
                         color: Colours.tPalette.m3onSurfaceVariant
                         elide: Text.ElideRight
@@ -128,7 +129,7 @@ PanelWindow {
             // Description Message
             StyledText {
                 Layout.fillWidth: true
-                text: PolkitAgent.message || qsTr("An application is attempting to perform an action that requires root authorization.")
+                text: PolkitAgent.message || Tr.tr("An application is attempting to perform an action that requires root authorization.")
                 font: Tokens.font.body.medium
                 color: Colours.tPalette.m3onSurface
                 wrapMode: Text.WordWrap
@@ -147,7 +148,7 @@ PanelWindow {
 
                     anchors.fill: parent
                     anchors.margins: Tokens.padding.small
-                    text: qsTr("Action: %1").arg(PolkitAgent.actionId)
+                    text: Tr.tr("Action: %1").arg(PolkitAgent.actionId)
                     font: Tokens.font.label.small
                     color: Colours.tPalette.m3outline
                     elide: Text.ElideMiddle
@@ -160,7 +161,7 @@ PanelWindow {
                 spacing: Tokens.spacing.extraSmall
 
                 StyledText {
-                    text: PolkitAgent.prompt || qsTr("Password")
+                    text: PolkitAgent.prompt || Tr.tr("Password")
                     font: Tokens.font.label.medium
                     color: Colours.tPalette.m3onSurfaceVariant
                 }
@@ -170,7 +171,7 @@ PanelWindow {
 
                     Layout.fillWidth: true
                     echoMode: PolkitAgent.echo ? TextInput.Normal : TextInput.Password
-                    placeholderText: qsTr("Enter password…")
+                    placeholderText: Tr.tr("Enter password…")
                     enabled: !PolkitAgent.isBusy
                     focus: root.isAuthActive
 
@@ -227,7 +228,7 @@ PanelWindow {
                         id: cancelLabel
 
                         anchors.centerIn: parent
-                        text: qsTr("Cancel")
+                        text: Tr.tr("Cancel")
                         font: Tokens.font.label.large
                         color: Colours.tPalette.m3onSurface
                     }
@@ -265,7 +266,7 @@ PanelWindow {
                         }
 
                         StyledText {
-                            text: qsTr("Authenticate")
+                            text: Tr.tr("Authenticate")
                             font: Tokens.font.label.large
                             color: Colours.tPalette.m3onPrimary
                         }

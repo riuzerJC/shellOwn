@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.services
@@ -33,14 +34,14 @@ Item {
 
             StyledText {
                 Layout.fillWidth: true
-                text: qsTr("Subscriptions")
+                text: Tr.tr("Subscriptions")
                 font: Tokens.font.title.medium
                 color: Colours.palette.m3onSurface
             }
 
             StyledText {
                 visible: CodexBar.lastUpdated.getTime() > 0
-                text: visible ? qsTr("Updated %1").arg(Qt.formatDateTime(CodexBar.lastUpdated, "hh:mm")) : ""
+                text: visible ? Tr.tr("Updated %1").arg(Qt.formatDateTime(CodexBar.lastUpdated, "hh:mm")) : ""
                 font: Tokens.font.body.small
                 color: Colours.palette.m3onSurfaceVariant
             }
@@ -62,14 +63,14 @@ Item {
             spacing: Tokens.spacing.small
 
             TextButton {
-                text: qsTr("Usage")
+                text: Tr.tr("Usage")
                 isToggle: true
                 checked: root.view === 0
                 onClicked: root.view = 0
             }
 
             TextButton {
-                text: qsTr("Accounts")
+                text: Tr.tr("Accounts")
                 isToggle: true
                 checked: root.view === 1
                 onClicked: root.view = 1
@@ -79,7 +80,7 @@ Item {
         StyledText {
             Layout.fillWidth: true
             visible: !CodexBar.available
-            text: qsTr("CodexBar not found (install the codexbar CLI)")
+            text: Tr.tr("CodexBar not found (install the codexbar CLI)")
             font: Tokens.font.body.small
             color: Colours.palette.m3error
             wrapMode: Text.WordWrap
@@ -97,7 +98,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
                 visible: root.view === 0 && CodexBar.available && CodexBar.fetching && CodexBar.providers.length === 0
-                text: qsTr("Loading subscriptions...")
+                text: Tr.tr("Loading subscriptions...")
                 font: Tokens.font.body.small
                 color: Colours.palette.m3onSurfaceVariant
             }
@@ -106,7 +107,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.columnSpan: 2
                 visible: root.view === 0 && CodexBar.available && !CodexBar.fetching && CodexBar.providers.every(p => p.state !== "ok")
-                text: qsTr("No authenticated subscriptions — see the Accounts view")
+                text: Tr.tr("No authenticated subscriptions — see the Accounts view")
                 font: Tokens.font.body.small
                 color: Colours.palette.m3onSurfaceVariant
                 wrapMode: Text.WordWrap
@@ -183,7 +184,7 @@ Item {
                                     id: chipLabel
 
                                     anchors.centerIn: parent
-                                    text: card.failed ? qsTr("Auth") : card.modelData.plan
+                                    text: card.failed ? Tr.tr("Auth") : card.modelData.plan
                                     font: Tokens.font.label.small
                                     color: card.failed ? Colours.palette.m3onTertiaryContainer : Colours.palette.m3onSecondaryContainer
                                 }
@@ -225,7 +226,7 @@ Item {
                                 IconTextButton {
                                     visible: card.authFailed
                                     icon: "autorenew"
-                                    text: qsTr("Renew")
+                                    text: Tr.tr("Renew")
                                     onClicked: CodexBar.renew(card.modelData.id)
                                 }
                             }
@@ -298,7 +299,7 @@ Item {
 
                             StyledText {
                                 visible: card.modelData.credits !== null
-                                text: visible ? qsTr("%1 credits").arg(card.modelData.credits) : ""
+                                text: visible ? Tr.tr("%1 credits").arg(card.modelData.credits) : ""
                                 font: Tokens.font.label.medium
                                 color: Colours.palette.m3onSurfaceVariant
                             }
@@ -376,7 +377,7 @@ Item {
 
                                 StyledText {
                                     Layout.fillWidth: true
-                                    text: accountRow.modelData.accountEmail.length > 0 ? accountRow.modelData.accountEmail : qsTr("No account signed in")
+                                    text: accountRow.modelData.accountEmail.length > 0 ? accountRow.modelData.accountEmail : Tr.tr("No account signed in")
                                     font: Tokens.font.body.small
                                     color: Colours.palette.m3onSurfaceVariant
                                     elide: Text.ElideRight
@@ -419,7 +420,7 @@ Item {
                                 id: keyField
 
                                 Layout.fillWidth: true
-                                placeholderText: qsTr("API key")
+                                placeholderText: Tr.tr("API key")
                                 echoMode: TextInput.Password
                                 emptyIsValid: false
 
@@ -464,7 +465,7 @@ Item {
                                     CodexBar.setApiKey(accountRow.modelData.id, keyField.text, ok => {
                                         keyField.text = "";
                                         root.keyEditingFor = "";
-                                        accountRow.keyResult = ok ? qsTr("API key updated") : qsTr("Failed to set API key");
+                                        accountRow.keyResult = ok ? Tr.tr("API key updated") : Tr.tr("Failed to set API key");
                                         keyResultReset.restart();
                                     });
                                 }
@@ -484,7 +485,7 @@ Item {
                             visible: accountRow.keyResult.length > 0
                             text: accountRow.keyResult
                             font: Tokens.font.label.medium
-                            color: accountRow.keyResult.startsWith(qsTr("Failed")) ? Colours.palette.m3error : Colours.palette.m3primary
+                            color: accountRow.keyResult.startsWith(Tr.tr("Failed")) ? Colours.palette.m3error : Colours.palette.m3primary
                         }
 
                         Timer {

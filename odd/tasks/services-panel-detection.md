@@ -104,9 +104,17 @@ rebuilt and restarted on 2026-09-23.
       Commits on `fix/servicespanel-detection`: `5f6d3e59`, `73e9435b`, `c0dd5c00`, `af2144ad`,
       `55d78cdd`, `67e3bf03`.
 
+- [x] 10. Follow-up requested after review: migrate the remaining 46 `qsTr` sites in the 8
+      neighbouring local-fork modules (`modules/dashboard/{Content,Subscriptions}.qml`,
+      `modules/appcatalog/Content.qml`, `modules/polkit/PolkitDialog.qml`,
+      `modules/workspaceoverlay/{Content,WorkspaceTarget,WindowChip}.qml`,
+      `modules/nexus/pages/panels/DashboardPanel.qml`).
+      Evidence: `trs-check.py --strict --file` clean per file, `qmllint` clean, and a forced shell
+      reload adds no new `Tr is not defined` (log count unchanged at 10 historical hits).
+      Commit: pending.
+
 ## Not done / out of scope
 
-- The 46 `qsTr` call sites in the 8 neighbouring local-fork modules listed under task 6.
 - The built-in docker mapping in `plugin/src/Caelestia/config/serviceconfig.hpp` still pins
   `probeMode: cli-only`; changing it requires a plugin rebuild.
 - The dead-but-registered `modules/launcher/services/Services.qml` singleton (no consumer imports
