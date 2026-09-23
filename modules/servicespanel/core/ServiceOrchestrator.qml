@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell.Io
 import Caelestia
 import Caelestia.Config
+import Caelestia.I18n
 import qs.services
 import qs.utils
 import "./adapters" as Adapters
@@ -38,12 +39,12 @@ QtObject {
 
         onTriggered: {
             if (!targetEntry || retries <= 0) {
-                const verificationMessage = qsTr("Action finished but state verification failed after retries.");
+                const verificationMessage = Tr.tr("Action finished but state verification failed after retries.");
                 if (targetEntry) {
                     targetEntry.lastError = verificationMessage;
                     targetEntry.busy = false;
                 }
-                root.emitToast(qsTr("State verification failed"), verificationMessage, "error");
+                root.emitToast(Tr.tr("State verification failed"), verificationMessage, "error");
                 return;
             }
 
@@ -56,7 +57,7 @@ QtObject {
                 if (verifyResult.ok && verifyResult.state === expectedState) {
                     targetEntry.busy = false;
                     targetEntry.lastError = "";
-                    root.emitToast(qsTr("%1 %2").arg(targetEntry.name).arg(successSuffix), qsTr("Service status confirmed."), "check_circle");
+                    root.emitToast(Tr.tr("%1 %2").arg(targetEntry.name).arg(successSuffix), Tr.tr("Service status confirmed."), "check_circle");
                     return;
                 }
 
@@ -64,9 +65,9 @@ QtObject {
                     restart();
                 } else {
                     targetEntry.busy = false;
-                    const verificationMessage = verifyResult.message || qsTr("Action finished but state verification failed.");
+                    const verificationMessage = verifyResult.message || Tr.tr("Action finished but state verification failed.");
                     targetEntry.lastError = verificationMessage;
-                    root.emitToast(qsTr("%1 %2").arg(targetEntry.name).arg(verifyFailureSuffix), verificationMessage, "error");
+                    root.emitToast(Tr.tr("%1 %2").arg(targetEntry.name).arg(verifyFailureSuffix), verificationMessage, "error");
                 }
             });
         }
@@ -193,7 +194,7 @@ QtObject {
             nextEntries.push(serviceEntryFactory.createObject(root, {
                 id: mapping.id,
                 name: mapping.name,
-                description: mapping.description ?? qsTr("No description"),
+                description: mapping.description ?? Tr.tr("No description"),
                 icon: mapping.icon ?? "deployed_code",
                 iconFont: normalizeIconFont(mapping.iconFont),
                 adapterId: mapping.adapter,
@@ -240,7 +241,7 @@ QtObject {
 
         deprecatedConfigToastShown = true;
         console.warn("[services.panel] launcher.services is deprecated. Use services.panelMappings instead.");
-        emitToast(qsTr("Deprecated services mappings source"), qsTr("Use services.panelMappings instead of launcher.services."), "warning");
+        emitToast(Tr.tr("Deprecated services mappings source"), Tr.tr("Use services.panelMappings instead of launcher.services."), "warning");
     }
 
     function buildAdapterRegistry(): var {
@@ -269,7 +270,7 @@ QtObject {
         if (!mapping || typeof mapping !== "object") {
             return {
                 ok: false,
-                message: qsTr("Invalid services.panelMappings entry: expected object.")
+                message: Tr.tr("Invalid services.panelMappings entry: expected object.")
             };
         }
 
@@ -277,7 +278,7 @@ QtObject {
             if (!mapping[field] || `${mapping[field]}`.length === 0)
                 return {
                     ok: false,
-                    message: qsTr("Skipping service mapping with missing '%1'.").arg(field)
+                    message: Tr.tr("Skipping service mapping with missing '%1'.").arg(field)
                 };
 
         return {
@@ -289,28 +290,28 @@ QtObject {
         if (!adapter) {
             return {
                 ok: false,
-                message: qsTr("Skipping '%1': adapter not found.").arg(mappingId)
+                message: Tr.tr("Skipping '%1': adapter not found.").arg(mappingId)
             };
         }
 
         if (typeof adapter.probe !== "function") {
             return {
                 ok: false,
-                message: qsTr("Skipping '%1': adapter '%2' is missing probe().").arg(mappingId).arg(adapter.adapterId ?? "unknown")
+                message: Tr.tr("Skipping '%1': adapter '%2' is missing probe().").arg(mappingId).arg(adapter.adapterId ?? "unknown")
             };
         }
 
         if ((adapter.canStart ?? true) && typeof adapter.start !== "function") {
             return {
                 ok: false,
-                message: qsTr("Skipping '%1': adapter '%2' is missing start().").arg(mappingId).arg(adapter.adapterId ?? "unknown")
+                message: Tr.tr("Skipping '%1': adapter '%2' is missing start().").arg(mappingId).arg(adapter.adapterId ?? "unknown")
             };
         }
 
         if ((adapter.canStop ?? false) && typeof adapter.stop !== "function") {
             return {
                 ok: false,
-                message: qsTr("Skipping '%1': adapter '%2' is missing stop().").arg(mappingId).arg(adapter.adapterId ?? "unknown")
+                message: Tr.tr("Skipping '%1': adapter '%2' is missing stop().").arg(mappingId).arg(adapter.adapterId ?? "unknown")
             };
         }
 
@@ -344,7 +345,7 @@ QtObject {
 
     function normalizeProbeResult(entry: QtObject, rawResult: var): var {
         const normalizedByAdapter = typeof entry.adapterRef.normalizeError === "function" ? entry.adapterRef.normalizeError(rawResult) : rawResult;
-        const fallbackMessage = qsTr("Could not read %1 service status.").arg(entry.name);
+        const fallbackMessage = Tr.tr("Could not read %1 service status.").arg(entry.name);
 
         return {
             ok: normalizedByAdapter?.ok ?? false,
@@ -356,7 +357,7 @@ QtObject {
 
     function normalizeActionResult(entry: QtObject, rawResult: var): var {
         const normalizedByAdapter = typeof entry.adapterRef.normalizeError === "function" ? entry.adapterRef.normalizeError(rawResult) : rawResult;
-        const fallbackMessage = qsTr("Could not complete action for %1.").arg(entry.name);
+        const fallbackMessage = Tr.tr("Could not complete action for %1.").arg(entry.name);
 
         return {
             ok: normalizedByAdapter?.ok ?? false,
@@ -371,7 +372,7 @@ QtObject {
                 done({
                     ok: false,
                     state: "unknown",
-                    message: qsTr("Adapter contract error")
+                    message: Tr.tr("Adapter contract error")
                 });
             return;
         }
@@ -381,7 +382,7 @@ QtObject {
                 done({
                     ok: false,
                     state: entry.state,
-                    message: qsTr("Probe already running")
+                    message: Tr.tr("Probe already running")
                 });
             return;
         }
@@ -409,7 +410,7 @@ QtObject {
                 entry.lastError = result.message;
 
                 if (!result.ok && !options?.silent)
-                    emitToast(qsTr("%1 status failed").arg(entry.name), result.message, "error");
+                    emitToast(Tr.tr("%1 status failed").arg(entry.name), result.message, "error");
             }
 
             if (done)
@@ -422,21 +423,21 @@ QtObject {
             return;
 
         if (entry.state === "running") {
-            emitToast(qsTr("%1 is already running").arg(entry.name), qsTr("No action needed."), "info");
+            emitToast(Tr.tr("%1 is already running").arg(entry.name), Tr.tr("No action needed."), "info");
             return;
         }
 
         if (!(entry.capabilities?.start ?? true)) {
-            emitToast(qsTr("%1 cannot be started").arg(entry.name), qsTr("This service mapping is read-only."), "warning");
+            emitToast(Tr.tr("%1 cannot be started").arg(entry.name), Tr.tr("This service mapping is read-only."), "warning");
             return;
         }
 
         if (entry.probeInFlight) {
-            emitToast(qsTr("%1 is busy").arg(entry.name), qsTr("A status refresh is in progress. Please try again."), "schedule");
+            emitToast(Tr.tr("%1 is busy").arg(entry.name), Tr.tr("A status refresh is in progress. Please try again."), "schedule");
             return;
         }
 
-        runActionWithVerification(entry, "start", qsTr("started"), qsTr("start not confirmed"));
+        runActionWithVerification(entry, "start", Tr.tr("started"), Tr.tr("start not confirmed"));
     }
 
     function stopService(entry: QtObject): void {
@@ -444,27 +445,27 @@ QtObject {
             return;
 
         if (entry.state === "stopped") {
-            emitToast(qsTr("%1 is already stopped").arg(entry.name), qsTr("No action needed."), "info");
+            emitToast(Tr.tr("%1 is already stopped").arg(entry.name), Tr.tr("No action needed."), "info");
             return;
         }
 
         if (!(entry.capabilities?.stop ?? false)) {
-            emitToast(qsTr("%1 cannot be stopped").arg(entry.name), qsTr("This service mapping does not support stop."), "warning");
+            emitToast(Tr.tr("%1 cannot be stopped").arg(entry.name), Tr.tr("This service mapping does not support stop."), "warning");
             return;
         }
 
         if (entry.probeInFlight) {
-            emitToast(qsTr("%1 is busy").arg(entry.name), qsTr("A status refresh is in progress. Please try again."), "schedule");
+            emitToast(Tr.tr("%1 is busy").arg(entry.name), Tr.tr("A status refresh is in progress. Please try again."), "schedule");
             return;
         }
 
-        runActionWithVerification(entry, "stop", qsTr("stopped"), qsTr("stop not confirmed"));
+        runActionWithVerification(entry, "stop", Tr.tr("stopped"), Tr.tr("stop not confirmed"));
     }
 
     function runActionWithVerification(entry: QtObject, actionName: string, successSuffix: string, verifyFailureSuffix: string): void {
         const adapterAction = entry.adapterRef[actionName];
         if (typeof adapterAction !== "function") {
-            emitToast(qsTr("Failed to %1 %2").arg(actionName).arg(entry.name), qsTr("Adapter contract error."), "error");
+            emitToast(Tr.tr("Failed to %1 %2").arg(actionName).arg(entry.name), Tr.tr("Adapter contract error."), "error");
             return;
         }
 
@@ -480,7 +481,7 @@ QtObject {
             if (!actionResult.ok) {
                 entry.busy = false;
                 entry.lastError = actionResult.message;
-                emitToast(qsTr("Failed to %1 %2").arg(actionName).arg(entry.name), actionResult.message, "error", Toast.Error);
+                emitToast(Tr.tr("Failed to %1 %2").arg(actionName).arg(entry.name), actionResult.message, "error", Toast.Error);
                 return;
             }
 
@@ -494,8 +495,8 @@ QtObject {
                     const expectedState = actionName === "start" ? "running" : "stopped";
                     if (verifyResult.ok && verifyResult.state === expectedState) {
                         entry.lastError = "";
-                        const successTitle = actionName === "start" ? qsTr("%1 Started").arg(entry.name) : qsTr("%1 Stopped").arg(entry.name);
-                        const successDesc = actionName === "start" ? qsTr("Service is now running successfully.") : qsTr("Service has been stopped.");
+                        const successTitle = actionName === "start" ? Tr.tr("%1 Started").arg(entry.name) : Tr.tr("%1 Stopped").arg(entry.name);
+                        const successDesc = actionName === "start" ? Tr.tr("Service is now running successfully.") : Tr.tr("Service has been stopped.");
                         const successIcon = actionName === "start" ? "check_circle" : "stop_circle";
                         emitToast(successTitle, successDesc, successIcon, actionName === "start" ? Toast.Success : Toast.Info);
                         return;
@@ -511,9 +512,9 @@ QtObject {
                         return;
                     }
 
-                    const verificationMessage = verifyResult.message || qsTr("Action finished but state verification failed.");
+                    const verificationMessage = verifyResult.message || Tr.tr("Action finished but state verification failed.");
                     entry.lastError = verificationMessage;
-                    emitToast(qsTr("%1 %2").arg(entry.name).arg(verifyFailureSuffix), verificationMessage, "error");
+                    emitToast(Tr.tr("%1 %2").arg(entry.name).arg(verifyFailureSuffix), verificationMessage, "error");
                 });
             });
         });
@@ -529,7 +530,7 @@ QtObject {
             return;
 
         invalidConfigToastShown = true;
-        emitToast(qsTr("Some services were skipped"), invalidDiagnostics[0], "warning");
+        emitToast(Tr.tr("Some services were skipped"), invalidDiagnostics[0], "warning");
     }
 
     Component.onCompleted: reload()
@@ -579,11 +580,11 @@ QtObject {
                     root.mappingFileError = "";
                 } else {
                     root.fileMappings = [];
-                    root.mappingFileError = qsTr("Invalid services-panel.json: expected `mappings` array.");
+                    root.mappingFileError = Tr.tr("Invalid services-panel.json: expected `mappings` array.");
                 }
             } catch (e) {
                 root.fileMappings = [];
-                root.mappingFileError = qsTr("Failed to parse services-panel.json: %1").arg(String(e));
+                root.mappingFileError = Tr.tr("Failed to parse services-panel.json: %1").arg(String(e));
             }
             root.reload();
         }
@@ -594,7 +595,7 @@ QtObject {
                 root.mappingFileError = "";
             } else {
                 root.fileMappings = [];
-                root.mappingFileError = qsTr("Failed to read services-panel.json (%1)").arg(String(err));
+                root.mappingFileError = Tr.tr("Failed to read services-panel.json (%1)").arg(String(err));
             }
             root.reload();
         }

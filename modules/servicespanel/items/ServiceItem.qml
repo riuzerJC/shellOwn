@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.services
@@ -22,12 +23,12 @@ StyledRect {
 
     function stateLabel(state: string): string {
         if (state === "running")
-            return qsTr("Running");
+            return Tr.tr("Running");
         if (state === "stopped")
-            return qsTr("Stopped");
+            return Tr.tr("Stopped");
         if (state === "failed")
-            return qsTr("Failed");
-        return qsTr("Checking…");
+            return Tr.tr("Failed");
+        return Tr.tr("Checking…");
     }
 
     function stateColor(state: string): color {

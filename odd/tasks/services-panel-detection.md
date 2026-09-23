@@ -61,8 +61,17 @@ rebuilt and restarted on 2026-09-23.
       mapping shapes (default, `cli-only`, custom unit, `noPkexec`, `socketUnit: false`, explicit
       socket) and a live probe returned `running`; the live panel still shows Docker `Running`.
       Commit: pending.
-- [ ] 6. Migrate `qsTr` → `Tr.tr`/`Tr.trCtx` across `modules/servicespanel/**` and add
-      `import Caelestia.I18n`; validate with `scripts/trs-check.py --file` and `qmllint`.
+- [x] 6. Migrate `qsTr` → `Tr.tr` across `modules/servicespanel/**` (5 files, 71 call sites) and add
+      `import Caelestia.I18n` to each. Evidence: `scripts/trs-check.py --strict --file` reports no
+      issues per file, `qmllint` is clean, and a fresh shell generation logs no
+      `Tr is not defined` (the two historical hits were the intermediate sed-without-import state
+      and do not recur).
+      Note: 8 other local-fork modules still use `qsTr` (`modules/appcatalog/Content.qml`,
+      `modules/dashboard/{Content,Subscriptions}.qml`,
+      `modules/nexus/pages/panels/DashboardPanel.qml`, `modules/polkit/PolkitDialog.qml`,
+      `modules/workspaceoverlay/{Content,WindowChip,WorkspaceTarget}.qml`); a repo-wide
+      `scripts/trs-check.py` run will flag them. Out of scope here.
+      Commit: pending.
 - [ ] 7. Update `docs/services-panel.example.json` for `iconFont`, the new params and the
       `failed` state.
 - [ ] 8. End-to-end verification: `trs-check` + `qmllint` clean, live panel screenshot, close

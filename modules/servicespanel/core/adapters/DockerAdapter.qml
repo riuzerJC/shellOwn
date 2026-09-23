@@ -1,12 +1,13 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Caelestia.I18n
 
 QtObject {
     id: root
 
     property string adapterId: "docker"
-    property string displayName: qsTr("Docker")
+    property string displayName: Tr.tr("Docker")
     property bool canStart: true
     property bool canStop: true
     property list<QtObject> activeProcesses: []
@@ -15,14 +16,14 @@ QtObject {
         if (!rawResult)
             return {
                 ok: false,
-                message: qsTr("Docker command failed."),
+                message: Tr.tr("Docker command failed."),
                 detail: ""
             };
 
         return {
             ok: rawResult.ok ?? rawResult.success ?? false,
             state: rawResult.state ?? "unknown",
-            message: rawResult.message ?? rawResult.error ?? qsTr("Docker command failed."),
+            message: rawResult.message ?? rawResult.error ?? Tr.tr("Docker command failed."),
             detail: rawResult.detail ?? rawResult.output ?? ""
         };
     }
@@ -116,7 +117,7 @@ QtObject {
             callback({
                 ok: false,
                 state: "unknown",
-                message: qsTr("Unable to determine Docker status."),
+                message: Tr.tr("Unable to determine Docker status."),
                 detail: trace.join("\n")
             });
             return;
@@ -140,7 +141,7 @@ QtObject {
         if (index >= candidates.length) {
             callback({
                 ok: false,
-                message: qsTr("Unable to start Docker with known commands."),
+                message: Tr.tr("Unable to start Docker with known commands."),
                 detail: trace.join("\n")
             });
             return;
@@ -149,14 +150,14 @@ QtObject {
         const command = candidates[index];
         runCommand(command, result => {
             const commandLabel = commandToString(command);
-            const detail = result.error || result.output || qsTr("No output");
+            const detail = result.error || result.output || Tr.tr("No output");
             trace.push(`${commandLabel}: ${detail}`);
 
             if (result.success) {
                 callback({
                     ok: true,
-                    message: qsTr("Docker start command executed."),
-                    detail: `${commandLabel}: ${result.output || qsTr("ok")}`
+                    message: Tr.tr("Docker start command executed."),
+                    detail: `${commandLabel}: ${result.output || Tr.tr("ok")}`
                 });
                 return;
             }
@@ -169,7 +170,7 @@ QtObject {
         if (index >= candidates.length) {
             callback({
                 ok: false,
-                message: qsTr("Unable to stop Docker with known commands."),
+                message: Tr.tr("Unable to stop Docker with known commands."),
                 detail: trace.join("\n")
             });
             return;
@@ -178,14 +179,14 @@ QtObject {
         const command = candidates[index];
         runCommand(command, result => {
             const commandLabel = commandToString(command);
-            const detail = result.error || result.output || qsTr("No output");
+            const detail = result.error || result.output || Tr.tr("No output");
             trace.push(`${commandLabel}: ${detail}`);
 
             if (result.success) {
                 callback({
                     ok: true,
-                    message: qsTr("Docker stop command executed."),
-                    detail: `${commandLabel}: ${result.output || qsTr("ok")}`
+                    message: Tr.tr("Docker stop command executed."),
+                    detail: `${commandLabel}: ${result.output || Tr.tr("ok")}`
                 });
                 return;
             }
@@ -208,7 +209,7 @@ QtObject {
                     result: {
                         ok: true,
                         state: "running",
-                        message: qsTr("Docker is running.")
+                        message: Tr.tr("Docker is running.")
                     }
                 };
             }
@@ -220,7 +221,7 @@ QtObject {
                     result: {
                         ok: true,
                         state: "failed",
-                        message: qsTr("Docker has failed.")
+                        message: Tr.tr("Docker has failed.")
                     }
                 };
             }
@@ -231,7 +232,7 @@ QtObject {
                 result: {
                     ok: true,
                     state: "stopped",
-                    message: qsTr("Docker is stopped.")
+                    message: Tr.tr("Docker is stopped.")
                 }
             };
         }
@@ -244,7 +245,7 @@ QtObject {
                     result: {
                         ok: true,
                         state: "running",
-                        message: qsTr("Docker is responding.")
+                        message: Tr.tr("Docker is responding.")
                     }
                 };
             }
@@ -258,7 +259,7 @@ QtObject {
                     result: {
                         ok: true,
                         state: "stopped",
-                        message: qsTr("Docker is stopped.")
+                        message: Tr.tr("Docker is stopped.")
                     }
                 };
             }
@@ -266,7 +267,7 @@ QtObject {
 
         return {
             resolved: false,
-            trace: `${cmdLabel}: ${result.error || result.output || qsTr("probe failed")}`
+            trace: `${cmdLabel}: ${result.error || result.output || Tr.tr("probe failed")}`
         };
     }
 
