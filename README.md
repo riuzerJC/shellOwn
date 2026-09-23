@@ -875,12 +875,38 @@ Services are exposed through a standalone panel, independent from launcher state
 - Toggle via the dedicated shortcut route: `services`.
 - You can also toggle over IPC route: `caelestia shell drawers toggle services`.
 - Configure service entries in **`~/.config/caelestia/services-panel.json`** (primary source).
+  The file is watched, so edits apply without restarting the shell.
 - A ready-to-copy template is available at `docs/services-panel.example.json`.
 - Fallback source (deprecated): `services.panelMappings`, then `launcher.services`.
-- Built-in adapters: `docker` (example) and `systemd` (generic unit adapter).
+- Built-in adapters: `docker` and `systemd` (generic unit adapter).
 - Privileged start/stop for `systemd` uses `pkexec` by default (set `params.noPkexec: true` to disable).
 - Compatibility note: `launcher.services` remains as a deprecated fallback during migration.
 - Follow-up cleanup: remove `launcher.services` fallback after migration window closes.
+
+Each mapping accepts:
+
+| Field | Meaning |
+| --- | --- |
+| `id`, `name`, `description` | Identity shown in the list. `description` has a fallback. |
+| `icon` | Material icon name, or a Nerd Font glyph when `iconFont` is `nerd`. |
+| `iconFont` | `material` (default) or `nerd`. Requires `CaskaydiaCoveNerdFont-Regular.ttf` in `/usr/share/fonts/TTF/`. |
+| `adapter` | `docker` or `systemd`. |
+| `enabled` | Skip the entry without deleting it. |
+| `capabilities.start` / `.stop` | Whether the panel may run the action. |
+
+Adapter params:
+
+| Param | Adapter | Meaning |
+| --- | --- | --- |
+| `unit` | both | Unit name; `.service` is optional. Docker defaults to `docker`. |
+| `socketUnit` | docker | Socket unit to start/stop alongside the unit. Defaults to `docker.socket` for the default unit, none otherwise; `false` disables it. |
+| `probeMode` | docker | `systemctl-or-cli` (default) tries `systemctl is-active`, then `service ... status`, then `docker info`. `cli-only` uses `docker info` only. |
+| `startCommandPreference` / `stopCommandPreference` | docker | Ordered fallback list of `systemctl`, `service`, `rc-service`. |
+| `userUnit` | systemd | Run `systemctl --user` instead of the system instance. |
+| `noPkexec` | both | Run the command directly instead of through `pkexec`. |
+
+Each entry reports `running`, `stopped`, `failed` or `unknown`. A unit in the systemd `failed`
+state is shown as *Failed* rather than being reported as stopped.
 
 Example `~/.config/caelestia/services-panel.json`:
 
@@ -892,6 +918,7 @@ Example `~/.config/caelestia/services-panel.json`:
             "name": "Docker",
             "description": "Container runtime daemon",
             "icon": "deployed_code",
+            "iconFont": "material",
             "adapter": "docker",
             "enabled": true,
             "capabilities": {
@@ -899,9 +926,10 @@ Example `~/.config/caelestia/services-panel.json`:
                 "stop": true
             },
             "params": {
-                "probeMode": "cli-only",
-                "startCommandPreference": ["systemctl"],
-                "stopCommandPreference": ["systemctl"]
+                "probeMode": "systemctl-or-cli",
+                "unit": "docker",
+                "startCommandPreference": ["systemctl", "service"],
+                "stopCommandPreference": ["systemctl", "service"]
             }
         },
         {
@@ -917,6 +945,23 @@ Example `~/.config/caelestia/services-panel.json`:
             },
             "params": {
                 "unit": "NetworkManager.service"
+            }
+        },
+        {
+            "id": "ydotool",
+            "name": "Ydotool daemon",
+            "description": "Wayland automation and key injection",
+            "icon": "\uf11c",
+            "iconFont": "nerd",
+            "adapter": "systemd",
+            "enabled": true,
+            "capabilities": {
+                "start": true,
+                "stop": true
+            },
+            "params": {
+                "unit": "ydotool.service",
+                "userUnit": true
             }
         }
     ]

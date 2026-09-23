@@ -81,8 +81,15 @@ rebuilt and restarted on 2026-09-23.
       Evidence: isolated harness — live docker/systemd probes still resolve, and
       `runCommand(["definitely-not-a-real-binary-xyz"])` reports failure after 3.0-4.0 s.
       Commit: pending.
-- [ ] 8. Update `docs/services-panel.example.json` and the *Services panel* README section for
-      `iconFont`, the adapter params and the `failed` state.
+- [x] 8. Update `docs/services-panel.example.json` (docker params, a systemd user unit and a
+      `iconFont: "nerd"` example with glyph U+F11C) and the *Services panel* README section
+      (field/param tables, watch behaviour, the four reported states).
+      Evidence: the JSON parses, the glyph exists in `CaskaydiaCoveNerdFont-Regular.ttf`, and the
+      README code block is byte-equivalent to the example after `json.loads`.
+      Commit: pending.
+      Note: the example documents `probeMode: systemctl-or-cli` (the QML default) while the built-in
+      mapping in `serviceconfig.hpp` pins `cli-only`; the example was left on the more portable
+      value and the C++ default was not touched to avoid forcing a plugin rebuild.
 - [ ] 9. End-to-end verification: `trs-check` + `qmllint` clean, live panel screenshot, close
       the remaining work units.
 
