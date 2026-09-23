@@ -4,7 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
-import Caelestia.Config
+import Caelestia.I18n
 import Caelestia.Services
 import qs.components.misc
 
@@ -28,13 +28,13 @@ Singleton {
     readonly property bool capsLock: keyboard?.capsLock ?? false
     readonly property bool numLock: keyboard?.numLock ?? false
     readonly property string defaultKbLayout: keyboard?.layout.split(",")[0] ?? "??"
-    readonly property string kbLayoutFull: keyboard?.activeKeymap ?? "Unknown"
-        readonly property string kbLayout: {
-            const raw = (kbMap.get(kbLayoutFull) ?? defaultKbLayout ?? "??").toLowerCase();
-            if (raw === "latam")
-                return "es";
-            return raw.length > 2 ? raw.slice(0, 2) : raw;
-        }
+    readonly property string kbLayoutFull: keyboard?.activeKeymap ?? Tr.trCtx("Unknown", "keyboard layout")
+    readonly property string kbLayout: {
+        const raw = (kbMap.get(kbLayoutFull) ?? defaultKbLayout ?? "??").toLowerCase();
+        if (raw === "latam")
+            return "es";
+        return raw.length > 2 ? raw.slice(0, 2) : raw;
+    }
     readonly property var kbMap: new Map()
 
     readonly property alias extras: extras
@@ -79,25 +79,33 @@ Singleton {
         return /^[0-9a-f]+$/.test(cleaned) ? cleaned : "";
     }
 
-        function moveWindowToWorkspace(address: string, target: var): bool {
-            const token = workspaceTargetToken(target);
-            const normalizedAddress = normalizeWindowAddress(address);
+    function moveWindowToWorkspace(address: string, target: var): bool {
+        const token = workspaceTargetToken(target);
+        const normalizedAddress = normalizeWindowAddress(address);
 
-            if (!token || !normalizedAddress)
-                return false;
+        if (!token || !normalizedAddress)
+            return false;
 
-            if (usingLua) {
-                if (token.startsWith("special:"))
-                    dispatch(`hl.dsp.window.move({ window = "address:0x${normalizedAddress}", workspace = "${token}" })`);
-                else
-                    dispatch(`hl.dsp.window.move({ window = "address:0x${normalizedAddress}", workspace = ${Number(token) || 1} })`);
-            } else {
-                dispatch(`movetoworkspacesilent ${token},address:0x${normalizedAddress}`);
-            }
-
-            forceRefreshState();
-            return true;
+        if (usingLua) {
+            if (token.startsWith("special:"))
+                dispatch(`hl.dsp.window.move({ window = "address:0x${normalizedAddress}", workspace = "${token}" })`);
+            else
+                dispatch(`hl.dsp.window.move({ window = "address:0x${normalizedAddress}", workspace = ${Number(token) || 1} })`);
+        } else {
+            dispatch(`movetoworkspacesilent ${token},address:0x${normalizedAddress}`);
         }
+
+        forceRefreshState();
+        return true;
+    }
+
+    function focusWorkspace(ws: var): void {
+        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${ws}" })` : `workspace ${ws}`);
+    }
+
+    function toggleSpecial(name: string): void {
+        dispatch(usingLua ? `hl.dsp.workspace.toggle_special("${name}")` : `togglespecialworkspace ${name}`);
+    }
 
     function forceRefreshState(): void {
         Hyprland.refreshToplevels();
@@ -117,11 +125,11 @@ Singleton {
             if (lastSpecialWorkspace) {
                 const workspace = workspaces.values.find(w => w.name === lastSpecialWorkspace);
                 if (workspace && workspace.lastIpcObject.windows > 0) {
-                    dispatch(usingLua ? `hl.dsp.focus({ workspace = "${lastSpecialWorkspace}" })` : `workspace ${lastSpecialWorkspace}`);
+                    focusWorkspace(lastSpecialWorkspace);
                     return;
                 }
             }
-            dispatch(usingLua ? `hl.dsp.focus({ workspace = "${openSpecials[0].name}" })` : `workspace ${openSpecials[0].name}`);
+            focusWorkspace(openSpecials[0].name);
             return;
         }
 
@@ -135,7 +143,7 @@ Singleton {
                 nextIndex = (currentIndex - 1 + openSpecials.length) % openSpecials.length;
         }
 
-        dispatch(usingLua ? `hl.dsp.focus({ workspace = "${openSpecials[nextIndex].name}" })` : `workspace ${openSpecials[nextIndex].name}`);
+        focusWorkspace(openSpecials[nextIndex].name);
     }
 
     function monitorNames(): list<string> {
@@ -146,16 +154,19 @@ Singleton {
         return Hyprland.monitorFor(screen);
     }
 
-    function toplevelsForWs(ws: int): list<HyprlandToplevel> {
-        return toplevels.values.filter(t => t.workspace && t.workspace.id === ws && !isToplevelIgnored(t));
+    function trimWsName(name: string): string {
+        return name.startsWith("special:") ? name.slice("special:".length) : name;
     }
 
-    function isToplevelIgnored(toplevel: HyprlandToplevel): bool {
+    function toplevelsForWs(ws: int, ignoredTags = []): list<HyprlandToplevel> {
+        return toplevels.values.filter(t => t.workspace && t.workspace.id === ws && !isToplevelIgnored(t, ignoredTags));
+    }
+
+    function isToplevelIgnored(toplevel: HyprlandToplevel, ignoredTags = []): bool {
         const ipc = toplevel?.lastIpcObject;
         if (!ipc?.class || !ipc.mapped)
             return true;
 
-        const ignoredTags = GlobalConfig.bar.workspaces.ignoredTags;
         return ipc.tags?.some(tag => ignoredTags.includes(tag.replace(/\*$/, ""))) ?? false;
     }
 
