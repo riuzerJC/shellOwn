@@ -32,23 +32,43 @@ rebuilt and restarted on 2026-09-23.
 - [x] 1. Fix `SystemdAdapter` probe output collection (`.value` → `.text`). Evidence: live panel
       screenshot after the fix shows Docker `Running`, PostgreSQL `Stopped`, and
       Bluetooth/Firewall/NetworkManager/ASUS `Running`, matching `systemctl is-active`.
-      Commit: pending.
-- [ ] 2. Wire `iconFont` end to end (mapping → `ServiceEntry` → `ServiceItem`). Today
-      `ServiceItem` reads `modelData.iconFont` but nothing ever sets it, so the Nerd Font
-      branch added in `27fb63d6` is dead.
-- [ ] 3. Add a distinct `failed` state instead of collapsing it into `stopped`
-      (`SystemdAdapter`, `ServiceOrchestrator.stateFromRaw`, `ServiceItem` badge).
-      Today a `failed` unit renders as `Stopped` (observed with `postgresql.service`).
-- [ ] 4. `DockerAdapter`: make `probe()` honour `params.probeMode`/`params.unit` through the
+      Commit: `5f6d3e59`.
+- [x] 2. Wire `iconFont` end to end (mapping → `ServiceEntry` → `ServiceItem`), with
+      `normalizeIconFont()` defaulting anything that is not `"nerd"` to `"material"`.
+      Evidence: a temporary mapping with `iconFont: "nerd"` and glyph U+F1B2 rendered the
+      Nerd Font glyph in the panel; the temporary mapping was removed afterwards.
+      Commit: same work unit as 3 and 4.
+- [x] 3. Add a distinct `failed` state instead of collapsing it into `stopped`
+      (`SystemdAdapter` probe order, `ServiceOrchestrator.stateFromRaw`, stale-error clearing in
+      `probeEntry`, `ServiceItem` label/colours/border).
+      Evidence: `postgresql.service` (systemd state `failed`) now renders a red `Failed` badge
+      with `Service has failed.`
+      Commit: same work unit as 2 and 4.
+- [x] 4. Reload `services-panel.json` when it changes: the panel's `FileView` had
+      `watchChanges: true` without the `onFileChanged: reload()` call every other `FileView` in
+      the repo uses, so mapping edits were ignored until a shell restart.
+      Evidence: renaming a mapping in the JSON while the shell ran updated the open panel
+      without any QML reload.
+      Commit: same work unit as 2 and 3.
+      Known side effect: saving a *changed* JSON while the panel is open rebuilds the entries and
+      the panel closes (the Hyprland focus grab is cleared); reopening it shows the new mappings.
+      An identical-content write keeps it open. Follow-up candidate, not a blocker.
+- [ ] 5. `DockerAdapter`: make `probe()` honour `params.probeMode`/`params.unit` through the
       existing (currently dead) `buildProbeCommands`/`runProbeFallback` path, and make a failing
       `docker info` resolve to `stopped` so `probeMode: "cli-only"` cannot report `unknown`
       for a stopped daemon.
-- [ ] 5. Migrate `qsTr` → `Tr.tr`/`Tr.trCtx` across `modules/servicespanel/**` and add
+- [ ] 6. Migrate `qsTr` → `Tr.tr`/`Tr.trCtx` across `modules/servicespanel/**` and add
       `import Caelestia.I18n`; validate with `scripts/trs-check.py --file` and `qmllint`.
-- [ ] 6. Update `docs/services-panel.example.json` for `iconFont`, the new params and the
+- [ ] 7. Update `docs/services-panel.example.json` for `iconFont`, the new params and the
       `failed` state.
-- [ ] 7. End-to-end verification: `trs-check` + `qmllint` clean, live panel screenshot, and one
-      work-unit commit per task.
+- [ ] 8. End-to-end verification: `trs-check` + `qmllint` clean, live panel screenshot, close
+      the remaining work units.
+
+## Deviation from the original plan
+
+Tasks 2, 3 and 4 share one work-unit commit: they all edit the same three functions/objects in
+`ServiceOrchestrator.qml` plus `ServiceItem.qml`, and splitting interleaved hunks would have made
+the commits less reviewable than the change itself.
 
 ## Non-goals
 

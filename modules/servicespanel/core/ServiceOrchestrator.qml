@@ -195,6 +195,7 @@ QtObject {
                 name: mapping.name,
                 description: mapping.description ?? qsTr("No description"),
                 icon: mapping.icon ?? "deployed_code",
+                iconFont: normalizeIconFont(mapping.iconFont),
                 adapterId: mapping.adapter,
                 enabled: mapping.enabled ?? true,
                 capabilities: mapping.capabilities ?? ({
@@ -258,6 +259,10 @@ QtObject {
         }
 
         return registry;
+    }
+
+    function normalizeIconFont(rawFont: var): string {
+        return rawFont === "nerd" ? "nerd" : "material";
     }
 
     function validateMapping(mapping: var): var {
@@ -329,6 +334,7 @@ QtObject {
         switch (rawState) {
         case "running":
         case "stopped":
+        case "failed":
         case "unknown":
             return rawState;
         default:
@@ -397,12 +403,12 @@ QtObject {
             entry.state = result.state;
             entry.lastUpdatedAt = Date.now();
 
-            if (result.ok && result.state === "running") {
+            if (result.ok && (result.state === "running" || result.state === "stopped")) {
                 entry.lastError = "";
-            } else if (!result.ok) {
+            } else if (result.state === "failed" || !result.ok) {
                 entry.lastError = result.message;
 
-                if (!options?.silent)
+                if (!result.ok && !options?.silent)
                     emitToast(qsTr("%1 status failed").arg(entry.name), result.message, "error");
             }
 
@@ -560,6 +566,8 @@ QtObject {
         watchChanges: true
         printErrors: false
 
+        onFileChanged: reload()
+
         onLoaded: {
             try {
                 const parsed = JSON.parse(text());
@@ -597,6 +605,7 @@ QtObject {
         required property string name
         required property string description
         required property string icon
+        required property string iconFont
         required property string adapterId
         required property bool enabled
         required property var capabilities

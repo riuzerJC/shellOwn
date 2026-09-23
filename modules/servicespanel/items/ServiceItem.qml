@@ -17,6 +17,7 @@ StyledRect {
 
     readonly property bool isRunning: modelData?.state === "running"
     readonly property bool isStopped: modelData?.state === "stopped"
+    readonly property bool isFailed: modelData?.state === "failed"
     readonly property bool isBusy: modelData?.busy ?? false
 
     function stateLabel(state: string): string {
@@ -24,12 +25,16 @@ StyledRect {
             return qsTr("Running");
         if (state === "stopped")
             return qsTr("Stopped");
+        if (state === "failed")
+            return qsTr("Failed");
         return qsTr("Checking…");
     }
 
     function stateColor(state: string): color {
         if (state === "running")
             return Colours.tPalette.m3primaryContainer;
+        if (state === "failed")
+            return Colours.tPalette.m3errorContainer;
         if (state === "stopped")
             return Colours.tPalette.m3surfaceContainerHigh;
         return Colours.tPalette.m3surfaceContainerLowest;
@@ -38,6 +43,8 @@ StyledRect {
     function stateTextColor(state: string): color {
         if (state === "running")
             return Colours.tPalette.m3onPrimaryContainer;
+        if (state === "failed")
+            return Colours.tPalette.m3onErrorContainer;
         if (state === "stopped")
             return Colours.tPalette.m3onSurfaceVariant;
         return Colours.tPalette.m3outline;
@@ -56,7 +63,7 @@ StyledRect {
     radius: Tokens.rounding.medium
     color: hoverHandler.hovered ? Colours.tPalette.m3surfaceContainerHigh : Colours.tPalette.m3surfaceContainer
     border.width: 1
-    border.color: isRunning ? Colours.tPalette.m3primary : Colours.tPalette.m3outlineVariant
+    border.color: isRunning ? Colours.tPalette.m3primary : (isFailed ? Colours.tPalette.m3error : Colours.tPalette.m3outlineVariant)
     implicitHeight: 64
     anchors.left: parent?.left
     anchors.right: parent?.right
