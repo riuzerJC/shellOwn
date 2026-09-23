@@ -53,10 +53,14 @@ rebuilt and restarted on 2026-09-23.
       Known side effect: saving a *changed* JSON while the panel is open rebuilds the entries and
       the panel closes (the Hyprland focus grab is cleared); reopening it shows the new mappings.
       An identical-content write keeps it open. Follow-up candidate, not a blocker.
-- [ ] 5. `DockerAdapter`: make `probe()` honour `params.probeMode`/`params.unit` through the
-      existing (currently dead) `buildProbeCommands`/`runProbeFallback` path, and make a failing
-      `docker info` resolve to `stopped` so `probeMode: "cli-only"` cannot report `unknown`
-      for a stopped daemon.
+- [x] 5. `DockerAdapter`: `probe()` now runs `buildProbeCommands()`/`runProbeFallback()` (previously
+      dead code) and honours `params.probeMode` and `params.unit`; `params.socketUnit` controls the
+      socket (default `docker.socket` for the default unit, none otherwise, `false` to disable).
+      A failing `docker info` resolves to `stopped` and a `failed` unit to `failed`.
+      Evidence: isolated `qs` harness printed the resolved commands and parse results for six
+      mapping shapes (default, `cli-only`, custom unit, `noPkexec`, `socketUnit: false`, explicit
+      socket) and a live probe returned `running`; the live panel still shows Docker `Running`.
+      Commit: pending.
 - [ ] 6. Migrate `qsTr` → `Tr.tr`/`Tr.trCtx` across `modules/servicespanel/**` and add
       `import Caelestia.I18n`; validate with `scripts/trs-check.py --file` and `qmllint`.
 - [ ] 7. Update `docs/services-panel.example.json` for `iconFont`, the new params and the

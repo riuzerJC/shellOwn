@@ -27,34 +27,25 @@ QtObject {
         };
     }
 
+    function resolveUnit(serviceConfig: var): string {
+        const raw = String(serviceConfig?.params?.unit ?? "docker").trim();
+        return raw.endsWith(".service") ? raw.slice(0, -".service".length) : raw;
+    }
+
+    function resolveUnits(serviceConfig: var): list<string> {
+        const unit = resolveUnit(serviceConfig);
+        const rawSocket = serviceConfig?.params?.socketUnit;
+        let socket = "";
+        if (typeof rawSocket === "string")
+            socket = rawSocket.trim();
+        else if (rawSocket !== false && unit === "docker")
+            socket = "docker.socket";
+
+        return socket.length > 0 ? [socket, unit] : [unit];
+    }
+
     function probe(serviceConfig: var, callback: var): void {
-        runCommand(["systemctl", "is-active", "docker"], result => {
-            const output = `${result.output ?? ""}\n${result.error ?? ""}`.toLowerCase();
-            if (result.success && output.includes("active")) {
-                callback({
-                    ok: true,
-                    state: "running",
-                    message: qsTr("Docker is running."),
-                    detail: output.trim()
-                });
-                return;
-            }
-            if (output.includes("inactive") || output.includes("failed") || output.includes("dead") || (result.exitCode !== undefined && result.exitCode !== 0)) {
-                callback({
-                    ok: true,
-                    state: "stopped",
-                    message: qsTr("Docker is stopped."),
-                    detail: output.trim()
-                });
-                return;
-            }
-            callback({
-                ok: false,
-                state: "unknown",
-                message: qsTr("Unable to determine Docker status."),
-                detail: output.trim()
-            });
-        });
+        runProbeFallback(buildProbeCommands(serviceConfig), 0, [], callback);
     }
 
     function start(serviceConfig: var, callback: var): void {
@@ -68,13 +59,14 @@ QtObject {
     function buildProbeCommands(serviceConfig: var): var {
         const params = serviceConfig?.params ?? ({ });
         const mode = params.probeMode ?? "systemctl-or-cli";
+        const unit = resolveUnit(serviceConfig);
 
         if (mode === "cli-only")
             return [["docker", "info"]];
 
         return [
-            ["systemctl", "is-active", "docker"],
-            ["service", "docker", "status"],
+            ["systemctl", "is-active", unit],
+            ["service", unit, "status"],
             ["docker", "info"]
         ];
     }
@@ -86,15 +78,15 @@ QtObject {
 
         for (const strategy of preference) {
             if (strategy === "systemctl")
-                commands.push(usePkexec ? ["pkexec", "systemctl", "start", "docker.socket", "docker"] : ["systemctl", "start", "docker.socket", "docker"]);
+                commands.push((usePkexec ? ["pkexec", "systemctl"] : ["systemctl"]).concat(["start"], resolveUnits(serviceConfig)));
             else if (strategy === "service")
-                commands.push(["service", "docker", "start"]);
+                commands.push(["service", resolveUnit(serviceConfig), "start"]);
             else if (strategy === "rc-service")
-                commands.push(["rc-service", "docker", "start"]);
+                commands.push(["rc-service", resolveUnit(serviceConfig), "start"]);
         }
 
         if (commands.length === 0)
-            commands.push(usePkexec ? ["pkexec", "systemctl", "start", "docker.socket", "docker"] : ["systemctl", "start", "docker.socket", "docker"]);
+            commands.push((usePkexec ? ["pkexec", "systemctl"] : ["systemctl"]).concat(["start"], resolveUnits(serviceConfig)));
 
         return commands;
     }
@@ -106,15 +98,15 @@ QtObject {
 
         for (const strategy of preference) {
             if (strategy === "systemctl")
-                commands.push(usePkexec ? ["pkexec", "systemctl", "stop", "docker.socket", "docker"] : ["systemctl", "stop", "docker.socket", "docker"]);
+                commands.push((usePkexec ? ["pkexec", "systemctl"] : ["systemctl"]).concat(["stop"], resolveUnits(serviceConfig)));
             else if (strategy === "service")
-                commands.push(["service", "docker", "stop"]);
+                commands.push(["service", resolveUnit(serviceConfig), "stop"]);
             else if (strategy === "rc-service")
-                commands.push(["rc-service", "docker", "stop"]);
+                commands.push(["rc-service", resolveUnit(serviceConfig), "stop"]);
         }
 
         if (commands.length === 0)
-            commands.push(usePkexec ? ["pkexec", "systemctl", "stop", "docker.socket", "docker"] : ["systemctl", "stop", "docker.socket", "docker"]);
+            commands.push((usePkexec ? ["pkexec", "systemctl"] : ["systemctl"]).concat(["stop"], resolveUnits(serviceConfig)));
 
         return commands;
     }
@@ -208,7 +200,7 @@ QtObject {
         const success = result.success ?? false;
 
         // systemctl is-active: exit 0 = active, anything else = not active
-        if (command[0] === "systemctl" && command[1] === "is-active") {
+        if (command.includes("is-active")) {
             if (result.exitCode === 0) {
                 return {
                     resolved: true,
@@ -220,6 +212,19 @@ QtObject {
                     }
                 };
             }
+
+            if (output.includes("failed")) {
+                return {
+                    resolved: true,
+                    trace: `${cmdLabel}: failed (exit ${result.exitCode})`,
+                    result: {
+                        ok: true,
+                        state: "failed",
+                        message: qsTr("Docker has failed.")
+                    }
+                };
+            }
+
             return {
                 resolved: true,
                 trace: `${cmdLabel}: stopped (exit ${result.exitCode})`,
@@ -231,16 +236,32 @@ QtObject {
             };
         }
 
-        if (success && command[0] === "docker" && command[1] === "info") {
-            return {
-                resolved: true,
-                trace: `${cmdLabel}: running (docker info)`,
-                result: {
-                    ok: true,
-                    state: "running",
-                    message: qsTr("Docker is responding.")
-                }
-            };
+        if (command[0] === "docker" && command[1] === "info") {
+            if (success) {
+                return {
+                    resolved: true,
+                    trace: `${cmdLabel}: running (docker info)`,
+                    result: {
+                        ok: true,
+                        state: "running",
+                        message: qsTr("Docker is responding.")
+                    }
+                };
+            }
+
+            // The CLI answered with a failure exit code, so the binary exists but the
+            // daemon is not serving us: that is a stopped daemon, not an unknown state.
+            if ((result.exitCode ?? 0) > 0) {
+                return {
+                    resolved: true,
+                    trace: `${cmdLabel}: stopped (exit ${result.exitCode})`,
+                    result: {
+                        ok: true,
+                        state: "stopped",
+                        message: qsTr("Docker is stopped.")
+                    }
+                };
+            }
         }
 
         return {
