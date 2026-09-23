@@ -60,7 +60,7 @@ rebuilt and restarted on 2026-09-23.
       Evidence: isolated `qs` harness printed the resolved commands and parse results for six
       mapping shapes (default, `cli-only`, custom unit, `noPkexec`, `socketUnit: false`, explicit
       socket) and a live probe returned `running`; the live panel still shows Docker `Running`.
-      Commit: pending.
+      Commit: `c0dd5c00`.
 - [x] 6. Migrate `qsTr` → `Tr.tr` across `modules/servicespanel/**` (5 files, 71 call sites) and add
       `import Caelestia.I18n` to each. Evidence: `scripts/trs-check.py --strict --file` reports no
       issues per file, `qmllint` is clean, and a fresh shell generation logs no
@@ -74,7 +74,7 @@ rebuilt and restarted on 2026-09-23.
       `modules/workspaceoverlay/WindowChip.qml` (1). Out of scope here. A repo-wide
       `scripts/trs-check.py` run is dominated by `.git/gentle-ai/candidate-views/**` snapshots and
       `build/` copies, so it needs exclusions before it is a usable signal.
-      Commit: pending.
+      Commit: `af2144ad`.
 - [x] 7. Add a command start watchdog to both adapters. Quickshell never emits `exited` when a
       binary cannot be found, so any probe candidate that may not exist (`docker info`, `service`)
       would leave an entry `probeInFlight` forever with a stuck `Checking…` row. A 1 s sweep now
@@ -83,13 +83,13 @@ rebuilt and restarted on 2026-09-23.
       guarded so a command reports exactly once.
       Evidence: isolated harness — live docker/systemd probes still resolve, and
       `runCommand(["definitely-not-a-real-binary-xyz"])` reports failure after 3.0-4.0 s.
-      Commit: pending.
+      Commit: `55d78cdd`.
 - [x] 8. Update `docs/services-panel.example.json` (docker params, a systemd user unit and a
       `iconFont: "nerd"` example with glyph U+F11C) and the *Services panel* README section
       (field/param tables, watch behaviour, the four reported states).
       Evidence: the JSON parses, the glyph exists in `CaskaydiaCoveNerdFont-Regular.ttf`, and the
       README code block is byte-equivalent to the example after `json.loads`.
-      Commit: pending.
+      Commit: `67e3bf03`.
       Note: the example documents `probeMode: systemctl-or-cli` (the QML default) while the built-in
       mapping in `serviceconfig.hpp` pins `cli-only`; the example was left on the more portable
       value and the C++ default was not touched to avoid forcing a plugin rebuild.
@@ -111,7 +111,7 @@ rebuilt and restarted on 2026-09-23.
       `modules/nexus/pages/panels/DashboardPanel.qml`).
       Evidence: `trs-check.py --strict --file` clean per file, `qmllint` clean, and a forced shell
       reload adds no new `Tr is not defined` (log count unchanged at 10 historical hits).
-      Commit: pending.
+      Commit: `ea4cb9cc`.
 
 ## Not done / out of scope
 
