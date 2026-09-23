@@ -66,11 +66,14 @@ rebuilt and restarted on 2026-09-23.
       issues per file, `qmllint` is clean, and a fresh shell generation logs no
       `Tr is not defined` (the two historical hits were the intermediate sed-without-import state
       and do not recur).
-      Note: 8 other local-fork modules still use `qsTr` (`modules/appcatalog/Content.qml`,
-      `modules/dashboard/{Content,Subscriptions}.qml`,
-      `modules/nexus/pages/panels/DashboardPanel.qml`, `modules/polkit/PolkitDialog.qml`,
-      `modules/workspaceoverlay/{Content,WindowChip,WorkspaceTarget}.qml`); a repo-wide
-      `scripts/trs-check.py` run will flag them. Out of scope here.
+      Note: 8 other local-fork modules still use `qsTr` (46 occurrences total):
+      `modules/dashboard/Subscriptions.qml` (14), `modules/appcatalog/Content.qml` (11),
+      `modules/polkit/PolkitDialog.qml` (8), `modules/workspaceoverlay/Content.qml` (6),
+      `modules/workspaceoverlay/WorkspaceTarget.qml` (4), `modules/dashboard/Content.qml` (1),
+      `modules/nexus/pages/panels/DashboardPanel.qml` (1),
+      `modules/workspaceoverlay/WindowChip.qml` (1). Out of scope here. A repo-wide
+      `scripts/trs-check.py` run is dominated by `.git/gentle-ai/candidate-views/**` snapshots and
+      `build/` copies, so it needs exclusions before it is a usable signal.
       Commit: pending.
 - [x] 7. Add a command start watchdog to both adapters. Quickshell never emits `exited` when a
       binary cannot be found, so any probe candidate that may not exist (`docker info`, `service`)
@@ -90,8 +93,24 @@ rebuilt and restarted on 2026-09-23.
       Note: the example documents `probeMode: systemctl-or-cli` (the QML default) while the built-in
       mapping in `serviceconfig.hpp` pins `cli-only`; the example was left on the more portable
       value and the C++ default was not touched to avoid forcing a plugin rebuild.
-- [ ] 9. End-to-end verification: `trs-check` + `qmllint` clean, live panel screenshot, close
-      the remaining work units.
+- [x] 9. End-to-end verification.
+      `scripts/trs-check.py --strict --file` reports no issues for all 8 panel files, `qmllint`
+      (`-I build/qml -I /usr/lib/qt6/qml`) is clean, and a fresh shell generation logs no
+      `Tr is not defined` or other services-panel error.
+      Adapter ground truth, all 8 mappings of the real user config:
+      docker `running`, postgresql `failed`, bluetooth/firewalld/NetworkManager/asusd `running`
+      (live panel, cross-checked against `systemctl is-active`), pipewire and ydotool `running`
+      as `--user` units (adapter harness). A nonexistent unit resolves to `stopped`.
+      Commits on `fix/servicespanel-detection`: `5f6d3e59`, `73e9435b`, `c0dd5c00`, `af2144ad`,
+      `55d78cdd`, `67e3bf03`.
+
+## Not done / out of scope
+
+- The 46 `qsTr` call sites in the 8 neighbouring local-fork modules listed under task 6.
+- The built-in docker mapping in `plugin/src/Caelestia/config/serviceconfig.hpp` still pins
+  `probeMode: cli-only`; changing it requires a plugin rebuild.
+- The dead-but-registered `modules/launcher/services/Services.qml` singleton (no consumer imports
+  it) was left in place.
 
 ## Deviation from the original plan
 
