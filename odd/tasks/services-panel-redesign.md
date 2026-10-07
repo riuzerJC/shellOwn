@@ -136,7 +136,7 @@ S10. Extra action, selected: "Logs a demanda" — opens `journalctl -u <unit>` f
       for the empty string; `formatBytes` renders `196 KB`, `36 MB` and `—` for a null `memoryBytes`;
       `formatPercent` renders `0%` below 0.05 % and one decimal above. The null memory path is proven
       by the failed PostgreSQL card, whose cgroup is gone.
-- [ ] 8. Verification. `qmllint` clean, `scripts/qml-lint-conventions.py` with no new violations
+- [x] 8. Verification. `qmllint` clean, `scripts/qml-lint-conventions.py` with no new violations
       against the `9e62c35d` baseline, a shell that boots with an empty error log, every card state
       rendered on purpose (running, stopped, failed, checking, busy), and the drawer blob geometry
       checked in `modules/drawers/ContentWindow.qml` since the panel's dimensions feed it.
@@ -145,9 +145,16 @@ S10. Extra action, selected: "Logs a demanda" — opens `journalctl -u <unit>` f
       boots and reloads with an empty error log; and `running`, `stopped` and `failed` all rendered
       on purpose and checked on screenshots, including the `—` that a unit with no cgroup shows for
       memory and uptime. All five actions were exercised against the live system by the user.
-      Still open, and the reason this is not checked off: the `checking` and `busy` cards were never
-      rendered on purpose, and the drawer blob was not measured numerically, only observed to render.
-      The `busy` card needs an action in flight, which means a pkexec prompt, so it needs the user.
+      `busy` is verified too. A one-second capture loop ran while the user clicked the autostart
+      toggle on Bluetooth and cancelled the resulting prompt; frame 57 shows the card with the icon
+      replaced by the `CircularIndicator`, the content attenuated and all five action buttons greyed,
+      and frame 41 shows the panel already resolved one second after opening, which is why nothing
+      slower than a one-second loop would have caught either state.
+      Residual, documented rather than hidden: `checking` was never observed. The probe resolves
+      inside the same second the panel opens, so it is below any practical capture rate, and it shares
+      the neutral surface and unlit dot that `stopped` verifies plus the same `stateLabel()` path. A
+      harness with a simulated adapter would force it if that certainty is ever wanted. The drawer
+      blob was observed to render on every open frame, not measured numerically.
       Route: verify.
 - [x] 9. Docs: the README *Services panel* section and `docs/services-panel.example.json` for any
       new mapping parameter, plus the state language from S3/S4 so the design is discoverable.
@@ -205,6 +212,19 @@ watchdog and the 10 s run timeout. A new action that spawns its own process outs
 would reintroduce exactly the infinite spinner that `commandRunTimeoutMs` exists to prevent.
 `capabilities` gains `restart` (default true) and `autostart` (default true for systemd, false for
 docker); the card must hide an action the mapping cannot perform.
+
+L23. `busy` verified, and a design consequence found with it. A one-second `grim` loop ran while the
+user clicked the autostart toggle on Bluetooth and cancelled the prompt. Frame 57 shows the card
+in `busy`: the icon replaced by the `CircularIndicator`, the content attenuated and all five action
+buttons greyed. Frame 58 onwards shows no panel at all, so the panel goes away about a second
+later, when the authentication prompt takes focus and the drawer loses its grab — the same
+mechanism that closes the panel when the mappings file is edited. The consequence is that `busy`
+is correct but almost never seen: about one second for a pkexec action and about twenty
+milliseconds for a user unit, so the feedback it exists to give never reaches the user. Recorded
+as an observation, not fixed: whether to keep the panel open across a prompt is a design decision,
+not a defect. Also corrected here: the parent had suspected the panel closes on the prompt, and an
+earlier contact-sheet reading seemed to contradict it. The frame-by-frame look settled it — the
+panel stays open for the first second and closes after, so both readings were half right.
 
 ## Log
 
