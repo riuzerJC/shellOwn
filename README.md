@@ -912,6 +912,12 @@ Adapter params:
 | `userUnit` | systemd | Run `systemctl --user` instead of the system instance. |
 | `noPkexec` | both | Run the command directly instead of through `pkexec`. |
 
+> Stopping a `docker` mapping stops the daemon, and **the daemon takes its containers down with it**.
+> The socket unit is stopped alongside the daemon on purpose: leaving it active would let the next
+> `docker` command socket-activate the daemon again, which would make Stop look like it did nothing.
+> Start the mapping again to bring the containers back; whether they return on their own depends on
+> their own restart policy, not on this panel.
+
 ### States
 
 | State | Card |
