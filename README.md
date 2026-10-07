@@ -874,8 +874,14 @@ Services are exposed through a standalone panel, independent from launcher state
 
 - Toggle via the dedicated shortcut route: `services`.
 - You can also toggle over IPC route: `caelestia shell drawers toggle services`.
+- Entries are laid out as a five-column grid that scrolls vertically past four rows.
 - Configure service entries in **`~/.config/caelestia/services-panel.json`** (primary source).
   The file is watched, so edits apply without restarting the shell.
+- **Writing a *changed* file while the panel is open closes the panel**, because rebuilding the
+  entries clears the Hyprland focus grab. Reopen it and the new mappings are there; writing identical
+  content keeps it open.
+- Every action command is bounded at ten seconds. A command that does not finish is killed and
+  reported, so a hanging authentication prompt cannot leave the panel spinning forever.
 - A ready-to-copy template is available at `docs/services-panel.example.json`.
 - Fallback source (deprecated): `services.panelMappings`, then `launcher.services`.
 - Built-in adapters: `docker` and `systemd` (generic unit adapter).
@@ -888,11 +894,12 @@ Each mapping accepts:
 | Field | Meaning |
 | --- | --- |
 | `id`, `name`, `description` | Identity shown in the list. `description` has a fallback. |
-| `icon` | Material icon name, or a Nerd Font glyph when `iconFont` is `nerd`. |
+| `icon` | Material Symbol name, or a Nerd Font glyph when `iconFont` is `nerd`. See *Icons* below. |
 | `iconFont` | `material` (default) or `nerd`. Requires `CaskaydiaCoveNerdFont-Regular.ttf` in `/usr/share/fonts/TTF/`. |
 | `adapter` | `docker` or `systemd`. |
 | `enabled` | Skip the entry without deleting it. |
-| `capabilities.start` / `.stop` | Whether the panel may run the action. |
+| `capabilities.start` / `.stop` | Whether the card offers the action. Both default to `true`. |
+| `capabilities.restart` / `.autostart` | Same, for the restart button and the autostart toggle. `restart` defaults to `true`; `autostart` defaults to `true` with the `systemd` adapter and `false` with `docker`, which cannot enable a container at boot. |
 
 Adapter params:
 
@@ -905,8 +912,74 @@ Adapter params:
 | `userUnit` | systemd | Run `systemctl --user` instead of the system instance. |
 | `noPkexec` | both | Run the command directly instead of through `pkexec`. |
 
-Each entry reports `running`, `stopped`, `failed` or `unknown`. A unit in the systemd `failed`
-state is shown as *Failed* rather than being reported as stopped.
+### States
+
+| State | Card |
+| --- | --- |
+| `running` | Elevated surface, `primary` border, lit status dot. |
+| `stopped` | Sunken surface, dashed `outlineVariant` border, attenuated content, unlit dot. |
+| `failed` | `errorContainer` surface, `error` border, lit red dot. The only state that shouts. |
+| `unknown` | Neutral surface, unlit dot. A probe still in flight shows as *Checking…*. |
+
+A unit in the systemd `failed` state is shown as *Failed* rather than being reported as stopped.
+
+### Card contents
+
+Every card shows all of this at once, with nothing hidden behind hover: the icon, the state label and
+the status dot; the name, elided to one line; four metrics; and the actions the mapping's
+`capabilities` allow, out of start/stop, restart, autostart, logs and a re-probe for that single
+service.
+
+The metrics are uptime, restarts (`NRestarts`), memory and CPU. Memory is one instantaneous read and
+renders `—` when the cgroup is gone, which is what a stopped unit reports. CPU is a percentage derived
+from two samples of the cumulative `CPUUsageNSec` counter taken by the panel's periodic refresh, and
+that refresh only runs while the panel is open: the first moment you open it every card reads `0%`
+until the second sample lands. A counter that moved backwards means the unit restarted, and that
+sample reports `0%` rather than a negative number.
+
+Restart and autostart prompt through `pkexec` the way start and stop do. The logs button does not
+prompt: it opens `journalctl -u <unit>` in the terminal configured at `general.apps.terminal`.
+
+### Icons
+
+With `iconFont: "nerd"` the `icon` value is the glyph itself rather than a Material Symbol name:
+
+```json
+{ "icon": "\uf21f", "iconFont": "nerd" }
+```
+
+**The codepoint must be in the Basic Multilingual Plane, `U+0000`–`U+FFFF`.** A codepoint above
+`U+FFFF` makes the whole mappings file unparseable: the shell logs `Failed to parse
+services-panel.json: SyntaxError: JSON.parse: Parse error`, silently falls back to the built-in
+mappings, and the panel stops reflecting your file. It fails whether the glyph is written as an
+escaped surrogate pair (`"\udb86\ude11"`) or as a literal UTF-8 character, so the codepoint is the
+limit and not the escape. Neither `python3 -c 'json.load(...)'` nor `node -e 'JSON.parse(...)'`
+catches it — check new glyphs in the panel itself.
+
+The consequence is that the whole `md-*` Material Design Icons set (`U+F0001`–`U+F1AF0`) is
+unavailable. What does work: Font Awesome (`fa-*`, `U+F000`–`U+F2FF`), Devicons (`dev-*`, `U+E700`+),
+Codicons (`cod-*`, `U+EA00`+) and Octicons (`oct-*`, `U+F400`+). Some that are useful for services:
+
+| Glyph | Codepoint | Glyph | Codepoint |
+| --- | --- | --- | --- |
+| `fa-docker` | `U+F21F` | `dev-postgresql` | `U+E76E` |
+| `dev-microsoftsqlserver` | `U+E82E` | `dev-mysql` | `U+E704` |
+| `dev-mariadb` | `U+E828` | `dev-redis` | `U+E76D` |
+| `dev-mongodb` | `U+E7A4` | `fa-database` | `U+F1C0` |
+| `fa-server` | `U+F233` | `fa-shield` | `U+F132` |
+| `fa-fire` | `U+F06D` | `fa-wifi` | `U+F1EB` |
+| `fa-bluetooth` | `U+F293` | `fa-laptop` | `U+F109` |
+| `fa-volume_up` | `U+F028` | `fa-keyboard` | `U+F11C` |
+| `fa-dropbox` | `U+F16B` | `fa-terminal` | `U+F120` |
+
+Before using one, confirm the font actually carries it:
+
+```sh
+fc-query -f '%{charset}' /usr/share/fonts/TTF/CaskaydiaCoveNerdFont-Regular.ttf
+```
+
+Nerd glyphs are drawn one step below the Material icon size, because they fill their em more and
+overflowed the icon slot at the Material size.
 
 Example `~/.config/caelestia/services-panel.json`:
 
