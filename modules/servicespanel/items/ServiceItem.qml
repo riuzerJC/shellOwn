@@ -21,6 +21,14 @@ StyledRect {
     readonly property bool isFailed: modelData?.state === "failed"
     readonly property bool isBusy: modelData?.busy ?? false
 
+    // Nerd Font glyphs live in their own family: the Material Symbols ligature names used by
+    // iconFont "material" do not exist there. Resolved by family name, as the mono token does,
+    // instead of a font file path that only exists in one distro's layout.
+    readonly property string nerdIconFamily: "CaskaydiaCove Nerd Font"
+    // Two thirds of the icon token keeps the previous 24pt at scale 1 while still honouring
+    // appearance.font.scale.
+    readonly property int nerdIconPointSize: Math.round(Tokens.font.icon.extraLarge.pointSize * 2 / 3)
+
     function stateLabel(state: string): string {
         if (state === "running")
             return Tr.tr("Running");
@@ -85,12 +93,6 @@ StyledRect {
         id: hoverHandler
     }
 
-    FontLoader {
-        id: nerdFontLoader
-
-        source: "file:///usr/share/fonts/TTF/CaskaydiaCoveNerdFont-Regular.ttf"
-    }
-
     RowLayout {
         anchors.fill: parent
         anchors.margins: Tokens.padding.medium
@@ -116,8 +118,8 @@ StyledRect {
 
                 sourceComponent: Text {
                     text: root.modelData?.icon ?? ""
-                    font.family: nerdFontLoader.name
-                    font.pointSize: 24
+                    font.family: root.nerdIconFamily
+                    font.pointSize: root.nerdIconPointSize
                     color: root.isRunning ? Colours.tPalette.m3primary : Colours.tPalette.m3onSurface
                     renderType: Text.NativeRendering
                 }
