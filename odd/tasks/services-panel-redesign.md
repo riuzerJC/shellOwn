@@ -137,13 +137,74 @@ S10. Extra action, selected: "Logs a demanda" — opens `journalctl -u <unit>` f
       `formatPercent` renders `0%` below 0.05 % and one decimal above. The null memory path is proven
       by the failed PostgreSQL card, whose cgroup is gone.
 - [ ] 8. Verification. `qmllint` clean, `scripts/qml-lint-conventions.py` with no new violations
-      against the `9e62c35d` baseline, a shell that boots with an empty error log, every tab card
-      state rendered on purpose (running, stopped, failed, checking, busy), and the drawer blob
-      geometry checked in `modules/drawers/ContentWindow.qml` since the panel's dimensions feed it.
+      against the `9e62c35d` baseline, a shell that boots with an empty error log, every card state
+      rendered on purpose (running, stopped, failed, checking, busy), and the drawer blob geometry
+      checked in `modules/drawers/ContentWindow.qml` since the panel's dimensions feed it.
+      Done: `qmllint` 0 errors on every touched file; the conventions linter at or below its baseline
+      everywhere (adapters 2, orchestrator 49, the three grid files and the card 0); a shell that
+      boots and reloads with an empty error log; and `running`, `stopped` and `failed` all rendered
+      on purpose and checked on screenshots, including the `—` that a unit with no cgroup shows for
+      memory and uptime. All five actions were exercised against the live system by the user.
+      Still open, and the reason this is not checked off: the `checking` and `busy` cards were never
+      rendered on purpose, and the drawer blob was not measured numerically, only observed to render.
+      The `busy` card needs an action in flight, which means a pkexec prompt, so it needs the user.
       Route: verify.
-- [ ] 9. Docs: the README *Services panel* section and `docs/services-panel.example.json` for any
+- [x] 9. Docs: the README *Services panel* section and `docs/services-panel.example.json` for any
       new mapping parameter, plus the state language from S3/S4 so the design is discoverable.
-      Route: parent.
+      Evidence: the README section gained a States table, a Card contents section and an Icons section
+      carrying the U+FFFF codepoint limit, the ten second timeout, the panel closing on a changed
+      mappings file, the new capabilities and how the CPU percentage is sampled. The example JSON
+      documents `restart` and `autostart` on both a systemd and a docker entry, and still parses.
+      Commit: `d68df1a9`.
+
+## Data contract for T2-T4
+
+Every adapter probe returns the existing `state` plus these fields, so the two adapters can be
+implemented without touching each other:
+
+| Field | Type | Source | Notes |
+| --- | --- | --- | --- |
+| `memoryBytes` | number or `null` | `MemoryCurrent` | `null` when the cgroup is gone (`[not set]`) |
+| `cpuUsageNSec` | number | `CPUUsageNSec` | MUST be genuinely cumulative. A source that can only offer a percentage is not acceptable for this field |
+| `restarts` | int | `NRestarts` | 0 when absent |
+| `activeSince` | string | `ActiveEnterTimestamp` | empty string when inactive |
+| `enabled` | bool or `null` | `UnitFileState` | `null` when the unit-file state is not enabled/enabled-runtime/static/alias/disabled |
+
+Every mapping in this panel resolves to a systemd unit, including the docker one, whose target is the
+daemon (`docker.service`). Metrics are therefore read from `systemctl show` for both adapters.
+Per-container metrics are out of scope: `docker stats` exposes only a percentage and no cumulative
+counter, so an honest container CPU figure needs a cgroup `cpu.stat` read.
+
+The percentage is the orchestrator's job, not the adapter's: `ServiceOrchestrator` samples
+`cpuUsageNSec` on a timer gated by the existing `setPanelVisible`, so the adapters stay stateless.
+The `state` values and their derivation are unchanged by this work.
+
+## Action contract for T6
+
+S7 and S10 need three actions that do not exist yet; only `start` and `stop` are implemented today.
+Frozen so the card UI and the action plumbing can be built in parallel against the same names.
+
+Adapter side, alongside the existing `probe`/`start`/`stop`:
+
+| Function | Behaviour |
+| --- | --- |
+| `restart(serviceConfig, callback)` | Restart the unit. systemd: `pkexec systemctl restart <unit>`, or `systemctl --user restart` for a user unit. Docker: its own restart path. |
+| `setAutostart(serviceConfig, enabled, callback)` | systemd: `pkexec systemctl enable\|disable <unit>`. Docker: unsupported, resolves with `ok: false` and a clear message. |
+| `logsCommand(serviceConfig)` | Returns the argv array to run in a terminal, e.g. `["journalctl", "-u", unit, "-n", "200", "-f"]`, with `--user` when applicable. |
+
+Orchestrator side:
+
+| Function | Behaviour |
+| --- | --- |
+| `restartServiceById(id)` | Same verification machinery as start/stop. |
+| `setAutostartById(id, enabled)` | Same, and a re-probe so the badge updates. |
+| `openLogsById(id)` | Runs `logsCommand()` in a terminal. |
+
+Every one of these must go through the adapters' existing `runCommand`, so they inherit the start
+watchdog and the 10 s run timeout. A new action that spawns its own process outside that machinery
+would reintroduce exactly the infinite spinner that `commandRunTimeoutMs` exists to prevent.
+`capabilities` gains `restart` (default true) and `autostart` (default true for systemd, false for
+docker); the card must hide an action the mapping cannot perform.
 
 ## Log
 
@@ -254,8 +315,7 @@ L21. Icons switched to Nerd Font at the user's request, all nine verified presen
     (U+F0001-U+F1AF0) is unusable here, and there is no wall glyph in the BMP, so firewalld keeps
     `fa-fire`. The Devicons family is BMP, so `dev-microsoftsqlserver` U+E82E, `dev-mysql` U+E704,
     `dev-mariadb` U+E828, `dev-redis` U+E76D and `dev-mongodb` U+E7A4 are all available for later.
-L22. The user reported the icons were too large and clipped by their container. Cause: the Nerd path
-    used `Tokens.font.icon.large` (24 pt) inside a 22 px icon slot, while the Material path used
+L22. The user reported the icons were too large and clipped by their container. Cause: the Nerd path    used `Tokens.font.icon.large` (24 pt) inside a 22 px icon slot, while the Material path used
     `icon.medium` (18 pt); Nerd glyphs fill their em more than Material Symbols do, so 24 pt overflowed.
     Fixed by aligning both paths on `icon.medium`, which also means switching `iconFont` no longer
     changes the size. Verified at 4x zoom on a live screenshot: both glyphs sit inside the container
@@ -273,51 +333,20 @@ L22. The user reported the icons were too large and clipped by their container. 
     one still fits. Residual: at 13 pt the detailed logos (the Docker whale, the PostgreSQL elephant)
     are small; `icon.small` at 15 pt is the step back up if any reads badly at real size.
 
-## Data contract for T2-T4
+## Commits
 
-Every adapter probe returns the existing `state` plus these fields, so the two adapters can be
-implemented without touching each other:
+Branch `feat/servicespanel-redesign`, cut from `main` before the first commit because `main` is the
+repository's default branch.
 
-| Field | Type | Source | Notes |
-| --- | --- | --- | --- |
-| `memoryBytes` | number or `null` | `MemoryCurrent` | `null` when the cgroup is gone (`[not set]`) |
-| `cpuUsageNSec` | number | `CPUUsageNSec` | MUST be genuinely cumulative. A source that can only offer a percentage is not acceptable for this field |
-| `restarts` | int | `NRestarts` | 0 when absent |
-| `activeSince` | string | `ActiveEnterTimestamp` | empty string when inactive |
-| `enabled` | bool or `null` | `UnitFileState` | `null` when the unit-file state is not enabled/enabled-runtime/static/alias/disabled |
-
-Every mapping in this panel resolves to a systemd unit, including the docker one, whose target is the
-daemon (`docker.service`). Metrics are therefore read from `systemctl show` for both adapters.
-Per-container metrics are out of scope: `docker stats` exposes only a percentage and no cumulative
-counter, so an honest container CPU figure needs a cgroup `cpu.stat` read.
-
-The percentage is the orchestrator's job, not the adapter's: `ServiceOrchestrator` samples
-`cpuUsageNSec` on a timer gated by the existing `setPanelVisible`, so the adapters stay stateless.
-The `state` values and their derivation are unchanged by this work.
-
-## Action contract for T6
-
-S7 and S10 need three actions that do not exist yet; only `start` and `stop` are implemented today.
-Frozen so the card UI and the action plumbing can be built in parallel against the same names.
-
-Adapter side, alongside the existing `probe`/`start`/`stop`:
-
-| Function | Behaviour |
+| Commit | Unit |
 | --- | --- |
-| `restart(serviceConfig, callback)` | Restart the unit. systemd: `pkexec systemctl restart <unit>`, or `systemctl --user restart` for a user unit. Docker: its own restart path. |
-| `setAutostart(serviceConfig, enabled, callback)` | systemd: `pkexec systemctl enable\|disable <unit>`. Docker: unsupported, resolves with `ok: false` and a clear message. |
-| `logsCommand(serviceConfig)` | Returns the argv array to run in a terminal, e.g. `["journalctl", "-u", unit, "-n", "200", "-f"]`, with `--user` when applicable. |
+| `74bfb6da` | `feat(servicespanel): read per-unit metrics and add restart, autostart and logs` — both adapters plus the orchestrator. |
+| `942af02b` | `feat(servicespanel): lay the panel out as a five-column grid` — `ServiceList.qml`, `Content.qml`, `Wrapper.qml`. |
+| `1e645769` | `feat(servicespanel): rebuild the service card as a state-driven square card` — `items/ServiceItem.qml`. |
+| `d68df1a9` | `docs(servicespanel): document states, card contents, actions and the icon codepoint limit` — README plus the example mapping. |
+| `6b1b2f7b` | `chore(servicespanel): add the redesign task document`. |
 
-Orchestrator side:
-
-| Function | Behaviour |
-| --- | --- |
-| `restartServiceById(id)` | Same verification machinery as start/stop. |
-| `setAutostartById(id, enabled)` | Same, and a re-probe so the badge updates. |
-| `openLogsById(id)` | Runs `logsCommand()` in a terminal. |
-
-Every one of these must go through the adapters' existing `runCommand`, so they inherit the start
-watchdog and the 10 s run timeout. A new action that spawns its own process outside that machinery
-would reintroduce exactly the infinite spinner that `commandRunTimeoutMs` exists to prevent.
-`capabilities` gains `restart` (default true) and `autostart` (default true for systemd, false for
-docker); the card must hide an action the mapping cannot perform.
+Ordered by dependency, not by size: the card calls the API the first commit adds, and it is sized for
+the cell the second commit introduces. The metric plumbing and the three new actions share one commit
+because both edit the same regions of `ServiceOrchestrator.qml`, and splitting interleaved hunks would
+have made the result less reviewable than the change itself.
