@@ -12,6 +12,8 @@ QtObject {
     property string displayName: Tr.tr("Systemd")
     property bool canStart: true
     property bool canStop: true
+    property bool canRestart: true
+    property bool canAutostart: true
     property list<QtObject> activeProcesses: []
     readonly property int commandStartTimeoutMs: 3000
     // Upper bound so a command that never returns cannot leave the panel spinning forever. Ten
@@ -24,14 +26,24 @@ QtObject {
             return {
                 ok: false,
                 message: Tr.tr("Service command failed."),
-                detail: ""
+                detail: "",
+                memoryBytes: null,
+                cpuUsageNSec: 0,
+                restarts: 0,
+                activeSince: "",
+                enabled: null
             };
 
         return {
             ok: rawResult.ok ?? rawResult.success ?? false,
             state: rawResult.state ?? "unknown",
             message: rawResult.message ?? rawResult.error ?? Tr.tr("Service command failed."),
-            detail: rawResult.detail ?? rawResult.output ?? ""
+            detail: rawResult.detail ?? rawResult.output ?? "",
+            memoryBytes: rawResult.memoryBytes ?? null,
+            cpuUsageNSec: rawResult.cpuUsageNSec ?? 0,
+            restarts: rawResult.restarts ?? 0,
+            activeSince: rawResult.activeSince ?? "",
+            enabled: rawResult.enabled ?? null
         };
     }
 
@@ -59,47 +71,95 @@ QtObject {
         }
 
         const isUser = isUserUnit(serviceConfig);
-        const command = isUser ? ["systemctl", "--user", "is-active", unit] : ["systemctl", "is-active", unit];
+        // One `show` call carries the state and every metric: ActiveState/SubState resolve the
+        // state the same way `is-active` did, and the remaining properties feed the S8/S9 fields.
+        const properties = "ActiveState,SubState,MemoryCurrent,CPUUsageNSec,NRestarts,ActiveEnterTimestamp,UnitFileState";
+        const command = isUser ? ["systemctl", "--user", "show", unit, "-p", properties] : ["systemctl", "show", unit, "-p", properties];
 
         runCommand(command, result => {
-            const output = `${result.output ?? ""}\n${result.error ?? ""}`.toLowerCase();
-            if (output.includes("failed")) {
-                callback({
-                    ok: true,
-                    state: "failed",
-                    message: Tr.tr("Service has failed."),
-                    detail: output.trim()
-                });
-                return;
-            }
-
-            if (result.success && output.includes("active")) {
-                callback({
-                    ok: true,
-                    state: "running",
-                    message: Tr.tr("Service is running."),
-                    detail: output.trim()
-                });
-                return;
-            }
-
-            if (output.includes("inactive") || output.includes("dead")) {
-                callback({
-                    ok: true,
-                    state: "stopped",
-                    message: Tr.tr("Service is stopped."),
-                    detail: output.trim()
-                });
-                return;
-            }
+            const output = `${result.output ?? ""}\n${result.error ?? ""}`.trim();
+            const fields = parseSystemdShow(result.output ?? "");
+            const resolved = stateFromActiveState(fields.ActiveState ?? "", fields.SubState ?? "");
+            const metrics = metricsFromShow(fields, resolved.state);
 
             callback({
-                ok: false,
-                state: "unknown",
-                message: Tr.tr("Unable to determine service status."),
-                detail: output.trim()
+                ok: resolved.state !== "unknown",
+                state: resolved.state,
+                message: resolved.message,
+                detail: output,
+                memoryBytes: metrics.memoryBytes,
+                cpuUsageNSec: metrics.cpuUsageNSec,
+                restarts: metrics.restarts,
+                activeSince: metrics.activeSince,
+                enabled: metrics.enabled
             });
         });
+    }
+
+    function parseSystemdShow(rawOutput: string): var {
+        const fields = {};
+        for (const line of String(rawOutput ?? "").split("\n")) {
+            const separator = line.indexOf("=");
+            if (separator <= 0)
+                continue;
+            fields[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+        }
+        return fields;
+    }
+
+    // Mirrors the old `is-active` mapping: failed -> failed, active -> running, inactive/dead ->
+    // stopped, anything else (activating, reloading, no output at all) -> unknown.
+    function stateFromActiveState(activeState: string, subState: string): var {
+        const state = String(activeState ?? "").trim().toLowerCase();
+        const sub = String(subState ?? "").trim().toLowerCase();
+
+        if (state === "failed")
+            return { state: "failed", message: Tr.tr("Service has failed.") };
+        if (state === "active")
+            return { state: "running", message: Tr.tr("Service is running.") };
+        if (state === "inactive" || state === "dead" || sub === "dead")
+            return { state: "stopped", message: Tr.tr("Service is stopped.") };
+
+        return { state: "unknown", message: Tr.tr("Unable to determine service status.") };
+    }
+
+    function metricsFromShow(fields: var, state: string): var {
+        return {
+            memoryBytes: memoryBytesFromShow(fields.MemoryCurrent),
+            cpuUsageNSec: numericFromShow(fields.CPUUsageNSec),
+            restarts: numericFromShow(fields.NRestarts),
+            activeSince: state === "running" ? (fields.ActiveEnterTimestamp ?? "") : "",
+            enabled: enabledFromUnitFileState(fields.UnitFileState)
+        };
+    }
+
+    function memoryBytesFromShow(rawValue: string): var {
+        const value = String(rawValue ?? "").trim().toLowerCase();
+        if (value === "" || value === "[not set]" || value === "infinity")
+            return null;
+
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    // `real`, not `int`: CPUUsageNSec routinely exceeds 32 bits.
+    function numericFromShow(rawValue: string): real {
+        const parsed = Number.parseInt(String(rawValue ?? "").trim(), 10);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    function enabledFromUnitFileState(rawValue: string): var {
+        switch (String(rawValue ?? "").trim()) {
+        case "enabled":
+        case "enabled-runtime":
+        case "static":
+        case "alias":
+            return true;
+        case "disabled":
+            return false;
+        default:
+            return null;
+        }
     }
 
     function start(serviceConfig: var, callback: var): void {
@@ -108,6 +168,26 @@ QtObject {
 
     function stop(serviceConfig: var, callback: var): void {
         runAction(serviceConfig, "stop", callback);
+    }
+
+    function restart(serviceConfig: var, callback: var): void {
+        runAction(serviceConfig, "restart", callback);
+    }
+
+    // `enable`/`disable` reuse the same command builder as start/stop, so a user unit stays
+    // `systemctl --user` and a system unit goes through pkexec unless the mapping opts out.
+    function setAutostart(serviceConfig: var, enabled: bool, callback: var): void {
+        runAction(serviceConfig, enabled ? "enable" : "disable", callback);
+    }
+
+    // Argv for a terminal to follow the unit's journal. `--user` is added for a user unit so the
+    // journal matches the unit the probe and the actions address.
+    function logsCommand(serviceConfig: var): var {
+        const unit = resolveUnit(serviceConfig);
+        if (!unit)
+            return [];
+
+        return isUserUnit(serviceConfig) ? ["journalctl", "--user", "-u", unit, "-n", "200", "-f"] : ["journalctl", "-u", unit, "-n", "200", "-f"];
     }
 
     function runAction(serviceConfig: var, action: string, callback: var): void {
