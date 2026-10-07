@@ -10,7 +10,9 @@
             "enabled": true,
             "capabilities": {
                 "start": true,
-                "stop": true
+                "stop": true,
+                "restart": true,
+                "autostart": false
             },
             "params": {
                 "probeMode": "systemctl-or-cli",
@@ -44,7 +46,9 @@
             "enabled": true,
             "capabilities": {
                 "start": true,
-                "stop": true
+                "stop": true,
+                "restart": true,
+                "autostart": true
             },
             "params": {
                 "unit": "ydotool.service",

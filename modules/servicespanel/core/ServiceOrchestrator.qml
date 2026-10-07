@@ -1,6 +1,8 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import Quickshell.Io
 import Caelestia
 import Caelestia.Config
@@ -169,6 +171,157 @@ QtObject {
         stopService(entry);
     }
 
+    function restartServiceById(serviceId: string): void {
+        const entry = findEntryById(serviceId);
+        if (!entry)
+            return;
+
+        if (entry.busy)
+            return;
+
+        if (!(entry.capabilities?.restart ?? true)) {
+            emitToast(Tr.tr("%1 cannot be restarted").arg(entry.name), Tr.tr("This service mapping does not support restart."), "warning");
+            return;
+        }
+
+        if (entry.probeInFlight) {
+            emitToast(Tr.tr("%1 is busy").arg(entry.name), Tr.tr("A status refresh is in progress. Please try again."), "schedule");
+            return;
+        }
+
+        const adapterAction = entry.adapterRef?.restart;
+        if (typeof adapterAction !== "function") {
+            emitToast(Tr.tr("Failed to restart %1").arg(entry.name), Tr.tr("Adapter contract error."), "error");
+            return;
+        }
+
+        entry.busy = true;
+        entry.actionToken += 1;
+        const currentActionToken = entry.actionToken;
+
+        // restart goes through the adapter's runCommand, so it inherits the start watchdog and the
+        // 10 s run timeout: a hung pkexec prompt still resolves instead of leaving the card spinning.
+        adapterAction.call(entry.adapterRef, entry.mappingRef, rawActionResult => {
+            if (currentActionToken !== entry.actionToken)
+                return;
+
+            const actionResult = normalizeActionResult(entry, rawActionResult);
+            if (!actionResult.ok) {
+                entry.busy = false;
+                entry.lastError = actionResult.message;
+                emitToast(Tr.tr("Failed to restart %1").arg(entry.name), actionResult.message, "error", Toast.Error);
+                return;
+            }
+
+            Qt.callLater(() => {
+                probeEntry(entry, {
+                    silent: true,
+                    allowBusy: true
+                }, verifyResult => {
+                    entry.busy = false;
+
+                    if (verifyResult.ok && verifyResult.state === "running") {
+                        entry.lastError = "";
+                        emitToast(Tr.tr("%1 Restarted").arg(entry.name), Tr.tr("Service is running again."), "restart_alt", Toast.Success);
+                        return;
+                    }
+
+                    const verificationMessage = verifyResult.message || Tr.tr("Action finished but state verification failed.");
+                    entry.lastError = verificationMessage;
+                    emitToast(Tr.tr("%1 restart not confirmed").arg(entry.name), verificationMessage, "error");
+                });
+            });
+        });
+    }
+
+    function setAutostartById(serviceId: string, enabled: bool): void {
+        const entry = findEntryById(serviceId);
+        if (!entry)
+            return;
+
+        if (entry.busy)
+            return;
+
+        if (!(entry.capabilities?.autostart ?? true)) {
+            emitToast(Tr.tr("%1 cannot change autostart").arg(entry.name), Tr.tr("This service mapping does not support autostart."), "warning");
+            return;
+        }
+
+        const adapterAction = entry.adapterRef?.setAutostart;
+        if (typeof adapterAction !== "function") {
+            emitToast(Tr.tr("Failed to update autostart for %1").arg(entry.name), Tr.tr("Adapter contract error."), "error");
+            return;
+        }
+
+        entry.busy = true;
+        entry.actionToken += 1;
+        const currentActionToken = entry.actionToken;
+
+        // setAutostart reuses the adapter's runCommand for the same watchdog coverage as the other
+        // actions; enable/disable can block on a pkexec prompt just like start/stop.
+        adapterAction.call(entry.adapterRef, entry.mappingRef, enabled, rawActionResult => {
+            if (currentActionToken !== entry.actionToken)
+                return;
+
+            const actionResult = normalizeActionResult(entry, rawActionResult);
+            if (!actionResult.ok) {
+                entry.busy = false;
+                entry.lastError = actionResult.message;
+                emitToast(Tr.tr("Failed to update autostart for %1").arg(entry.name), actionResult.message, "error", Toast.Error);
+                return;
+            }
+
+            // Re-probe so the card's autostart badge reflects the unit-file state the action changed.
+            Qt.callLater(() => {
+                probeEntry(entry, {
+                    silent: true,
+                    allowBusy: true
+                }, verifyResult => {
+                    entry.busy = false;
+
+                    if (verifyResult.ok && verifyResult.autostart === enabled) {
+                        entry.lastError = "";
+                        emitToast(Tr.tr("%1 autostart %2").arg(entry.name).arg(enabled ? Tr.tr("enabled") : Tr.tr("disabled")), Tr.tr("Autostart setting confirmed."), "toggle_on", Toast.Success);
+                        return;
+                    }
+
+                    const verificationMessage = verifyResult.message || Tr.tr("Action finished but autostart verification failed.");
+                    entry.lastError = verificationMessage;
+                    emitToast(Tr.tr("%1 autostart not confirmed").arg(entry.name), verificationMessage, "error");
+                });
+            });
+        });
+    }
+
+    function openLogsById(serviceId: string): void {
+        const entry = findEntryById(serviceId);
+        if (!entry)
+            return;
+
+        const logsBuilder = entry.adapterRef?.logsCommand;
+        if (typeof logsBuilder !== "function") {
+            emitToast(Tr.tr("Cannot open logs for %1").arg(entry.name), Tr.tr("Adapter contract error."), "error");
+            return;
+        }
+
+        const logsCommand = logsBuilder.call(entry.adapterRef, entry.mappingRef);
+        if (!Array.isArray(logsCommand) || logsCommand.length === 0) {
+            emitToast(Tr.tr("Cannot open logs for %1").arg(entry.name), Tr.tr("No log command available."), "warning");
+            return;
+        }
+
+        // The terminal comes from the shell's configured applications (general.apps.terminal); foot
+        // is the terminal this machine runs, so it is the fallback when the config list is empty.
+        const configuredTerminal = GlobalConfig.general.apps.terminal ?? [];
+        const terminal = [...configuredTerminal];
+        const launcher = terminal.length > 0 ? terminal : ["foot"];
+
+        // Detached on purpose: a `-f` journal is a long-lived interactive viewer, so it must not go
+        // through the adapters' runCommand (its 10 s timeout would kill it) and it never sets the
+        // card's busy spinner. This is how the rest of the shell opens a terminal.
+        Quickshell.execDetached([...launcher, ...logsCommand]);
+    }
+
     function reload(): void {
         clearEntries();
         invalidDiagnostics = [];
@@ -199,10 +352,15 @@ QtObject {
                 iconFont: normalizeIconFont(mapping.iconFont),
                 adapterId: mapping.adapter,
                 enabled: mapping.enabled ?? true,
-                capabilities: mapping.capabilities ?? ({
-                        start: true,
-                        stop: false
-                    }),
+                capabilities: Object.assign({
+                    start: true,
+                    stop: false,
+                    // Restart and autostart default from the adapter. An adapter that does not
+                    // implement an action resolves to false, so the card hides it instead of the
+                    // mapping being rejected by validateAdapter.
+                    restart: adapter.canRestart ?? (typeof adapter.restart === "function"),
+                    autostart: adapter.canAutostart ?? (typeof adapter.setAutostart === "function")
+                }, mapping.capabilities ?? ({ })),
                 mappingRef: mapping,
                 adapterRef: adapter
             }));
@@ -351,7 +509,14 @@ QtObject {
             ok: normalizedByAdapter?.ok ?? false,
             state: stateFromRaw(normalizedByAdapter?.state ?? "unknown"),
             message: normalizedByAdapter?.message ?? fallbackMessage,
-            detail: normalizedByAdapter?.detail ?? ""
+            detail: normalizedByAdapter?.detail ?? "",
+            // The adapters name the autostart flag `enabled`; the entry calls it `autostart` so it
+            // does not collide with the mapping's own `enabled` (whether the card is shown at all).
+            memoryBytes: normalizedByAdapter?.memoryBytes ?? null,
+            cpuUsageNSec: normalizedByAdapter?.cpuUsageNSec ?? 0,
+            restarts: normalizedByAdapter?.restarts ?? 0,
+            activeSince: normalizedByAdapter?.activeSince ?? "",
+            autostart: normalizedByAdapter?.enabled ?? null
         };
     }
 
@@ -403,6 +568,27 @@ QtObject {
 
             entry.state = result.state;
             entry.lastUpdatedAt = Date.now();
+
+            // CPU is only meaningful as a delta: the adapters report a cumulative counter, so the
+            // percentage comes from two consecutive probes. The first sample after the panel opens
+            // reports 0, and a counter that moved backwards means the unit restarted, which also
+            // reports 0 for that sample instead of a negative number. The cadence is the existing
+            // periodicRefresh, which only runs while the panel is visible. Kept inline rather than
+            // extracted because an extra function here would add a section-order violation to a
+            // file that already has 39 of them.
+            const sampledAt = Date.now();
+            const nextNs = Number(result.cpuUsageNSec ?? 0);
+            if (entry.cpuSampledAt > 0 && sampledAt > entry.cpuSampledAt && nextNs >= entry.cpuUsageNSec)
+                entry.cpuPercent = Math.max(0, (nextNs - entry.cpuUsageNSec) / ((sampledAt - entry.cpuSampledAt) * 1e6) * 100);
+            else
+                entry.cpuPercent = 0;
+
+            entry.cpuUsageNSec = nextNs;
+            entry.cpuSampledAt = sampledAt;
+            entry.memoryBytes = result.memoryBytes ?? null;
+            entry.restarts = result.restarts ?? 0;
+            entry.activeSince = result.activeSince ?? "";
+            entry.autostart = result.autostart ?? null;
 
             if (result.ok && (result.state === "running" || result.state === "stopped")) {
                 entry.lastError = "";
@@ -620,6 +806,17 @@ QtObject {
         property int probeToken: 0
         property int actionToken: 0
         property bool probeInFlight: false
+
+        // Metrics from the last probe. `memoryBytes` is null when the cgroup is gone, `autostart`
+        // null when the unit-file state is not one we recognise, and `cpuPercent` is derived from
+        // consecutive samples, never taken directly from the adapter.
+        property var memoryBytes: null
+        property real cpuUsageNSec: 0
+        property real cpuPercent: 0
+        property int restarts: 0
+        property string activeSince: ""
+        property var autostart: null
+        property double cpuSampledAt: 0
     }
 
     readonly property Component serviceEntryFactory: Component { ServiceEntry {} }

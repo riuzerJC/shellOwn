@@ -21,7 +21,7 @@ Item {
     Item {
         id: listWrapper
 
-        implicitWidth: list.width
+        implicitWidth: list.cardsWidth
         implicitHeight: list.height + root.padding
 
         anchors.horizontalCenter: parent.horizontalCenter
@@ -33,7 +33,7 @@ Item {
 
             anchors.top: parent.top
             anchors.topMargin: root.padding / 2
-            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.left: parent.left
 
             search: search
         }
@@ -81,8 +81,23 @@ Item {
 
             onAccepted: list.currentItem?.triggerPrimaryAction()
 
-            Keys.onUpPressed: list.decrementCurrentIndex()
-            Keys.onDownPressed: list.incrementCurrentIndex()
+            // Up/Down are free in a single-line field, so they always drive the grid. Left/Right are
+            // not: while the field holds text they belong to the caret, and swallowing them here
+            // would break text editing in the field the panel focuses on open.
+            Keys.onUpPressed: list.moveCurrentIndexUp()
+            Keys.onDownPressed: list.moveCurrentIndexDown()
+            Keys.onLeftPressed: event => {
+                if (search.text.length > 0)
+                    event.accepted = false;
+                else
+                    list.moveCurrentIndexLeft();
+            }
+            Keys.onRightPressed: event => {
+                if (search.text.length > 0)
+                    event.accepted = false;
+                else
+                    list.moveCurrentIndexRight();
+            }
             Keys.onEscapePressed: root.screenState.services = false
 
             Component.onCompleted: forceActiveFocus()

@@ -14,6 +14,9 @@ Item {
 
     property real offsetScale: shouldBeActive ? 0 : 1
 
+    // Frozen in T1: 5 columns of 179 px cards, four 8 px gaps, two 16 px panel paddings.
+    readonly property real panelWidth: 5 * 179 + 4 * Tokens.spacing.small + Tokens.padding.large * 2
+
     onShouldBeActiveChanged: {
         ServiceOrchestrator.setPanelVisible(shouldBeActive);
 
@@ -26,7 +29,7 @@ Item {
     visible: offsetScale < 1
     anchors.bottomMargin: (-implicitHeight - 5) * offsetScale
     implicitHeight: content.implicitHeight
-    implicitWidth: content.implicitWidth || 630
+    implicitWidth: content.implicitWidth || panelWidth
     opacity: 1 - offsetScale
 
     Component.onCompleted: ServiceOrchestrator.setPanelVisible(shouldBeActive)
