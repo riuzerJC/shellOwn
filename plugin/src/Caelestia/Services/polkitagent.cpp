@@ -12,7 +12,10 @@ namespace caelestia::services {
 
 PolkitAgent::PolkitAgent(QObject* parent)
     : PolkitQt1::Agent::Listener(parent) {
-    PolkitQt1::UnixProcessSubject subject(static_cast<qint64>(getpid()));
+    // Register the agent for the session rather than for this specific process: the process
+    // subject is bound to this pid, while the session is the subject polkit documents for an
+    // agent answering requests that originate from other processes.
+    PolkitQt1::UnixSessionSubject subject(static_cast<qint64>(getpid()));
     const bool registered = registerListener(subject, QStringLiteral("/org/caelestia/PolicyKit1/AuthenticationAgent"));
     if (registered) {
         qCInfo(lcPolkit) << "Caelestia Polkit authentication agent registered successfully.";
