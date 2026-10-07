@@ -9,7 +9,10 @@ import "modules/drawers"
 import "modules/background"
 import "modules/areapicker"
 import "modules/lock"
-import "modules/polkit"
+// The native Polkit agent below is disabled: it calls polkit_agent_session_response on an
+// invalidated session, so every authentication fails, and while registered it shadows
+// polkit-gnome, which does authenticate. Re-enable both lines once that bug is fixed.
+// import "modules/polkit"
 import QtQuick
 import Quickshell
 import qs.services
@@ -40,5 +43,5 @@ ShellRoot {
     IdleMonitors {
         lock: lock
     }
-    Polkit {}
+    // Polkit {}
 }
