@@ -200,6 +200,18 @@ QtObject {
         property bool startedFlag: false
         property double queuedAt: 0
         property bool finished: false
+        // pkexec waits on an authentication prompt that a missing or broken agent never answers.
+        // Without this the panel would keep spinning instead of reporting the failure. Declared as
+        // a property because Process has no default property to nest children in.
+        property Timer runWatchdog: Timer {
+            running: process.startedFlag && !process.finished
+            interval: root.commandRunTimeoutMs
+
+            onTriggered: {
+                process.running = false;
+                process.finish(-1, (stdoutCollector?.text ?? "").trim(), Tr.tr("Command timed out."));
+            }
+        }
 
         signal processFinished
 
@@ -229,19 +241,6 @@ QtObject {
         }
 
         onExited: exitCode => process.finish(exitCode, (stdoutCollector?.text ?? "").trim(), (stderrCollector?.text ?? "").trim())
-
-        // pkexec waits on an authentication prompt that a missing or broken agent never answers.
-        // Without this the panel would keep spinning instead of reporting the failure.
-        // Declared as a property: Process has no default property to nest children in.
-        property Timer runWatchdog: Timer {
-            running: process.startedFlag && !process.finished
-            interval: root.commandRunTimeoutMs
-
-            onTriggered: {
-                process.running = false;
-                process.finish(-1, (stdoutCollector?.text ?? "").trim(), Tr.tr("Command timed out."));
-            }
-        }
     }
 
     readonly property Component commandProcessFactory: Component { CommandProcess {} }
