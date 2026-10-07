@@ -12,6 +12,10 @@ QtObject {
     property bool canStop: true
     property list<QtObject> activeProcesses: []
     readonly property int commandStartTimeoutMs: 3000
+    // Upper bound so a command that never returns cannot leave the panel spinning forever. Ten
+    // seconds is enough for an authentication attempt to resolve once the password is submitted;
+    // raise it if it ever cuts off while you are still typing.
+    readonly property int commandRunTimeoutMs: 10000
 
     function normalizeError(rawResult: var): var {
         if (!rawResult)
@@ -360,6 +364,19 @@ QtObject {
         }
 
         onExited: code => process.finish(code, (stdoutCollector?.text ?? "").trim(), (stderrCollector?.text ?? "").trim())
+
+        // pkexec waits on an authentication prompt that a missing or broken agent never answers.
+        // Without this the panel would keep spinning instead of reporting the failure.
+        // Declared as a property: Process has no default property to nest children in.
+        property Timer runWatchdog: Timer {
+            running: process.startedFlag && !process.finished
+            interval: root.commandRunTimeoutMs
+
+            onTriggered: {
+                process.running = false;
+                process.finish(-1, (stdoutCollector?.text ?? "").trim(), Tr.tr("Command timed out."));
+            }
+        }
     }
 
     readonly property Component commandProcessFactory: Component {
