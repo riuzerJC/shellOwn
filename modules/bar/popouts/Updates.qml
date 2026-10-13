@@ -27,6 +27,16 @@ Item {
 
     function buildTargets(): var {
         const actions = [];
+        // The Nix branch: update the lock in-shell, then exactly one rebuild, chosen by the tool that
+        // is actually installed. Detection already selected this branch by tool presence.
+        if (Updates.nixStale) {
+            actions.push("nixFlakeUpdate");
+            if (Updates.hasNixosRebuild)
+                actions.push("nixosRebuild");
+            else if (Updates.hasHomeManager)
+                actions.push("homeManager");
+            return actions;
+        }
         let hasActionableOfficial = false;
         for (let i = 0; i < Updates.official.length; ++i) {
             if (!Updates.official[i].ignored) {
@@ -67,14 +77,6 @@ Item {
         return command ? command.argv.join(" ") : "";
     }
 
-    function inShellScript(command): string {
-        const parts = [];
-        if (command.cwd)
-            parts.push("cd " + Actions.shellQuote(command.cwd));
-        parts.push(command.argv.map(arg => Actions.shellQuote(arg)).join(" "));
-        return parts.join(" && ");
-    }
-
     function applyUpdates(): void {
         const flakePath = GlobalConfig.updates.flakePath;
         for (let i = 0; i < root.targets.length; ++i) {
@@ -87,7 +89,7 @@ Item {
                 Quickshell.execDetached(Actions.terminalCommand(root.terminal, command.argv, command.cwd, true));
             else
                 // No privileges and no interaction needed: run it in the shell (S6).
-                Quickshell.execDetached(["sh", "-c", root.inShellScript(command)]);
+                Quickshell.execDetached(["sh", "-c", Actions.shellCommand(command)]);
         }
         root.confirming = false;
     }

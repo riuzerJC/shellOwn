@@ -83,6 +83,43 @@ QtObject {
             }
         },
         {
+            name: "flake.lock exposes the remote branch of a github input",
+            run: function () {
+                cases.expectEqual(PendingUpdates.flakeRemoteRef(cases.lockText, "nixpkgs"), {
+                    url: "https://github.com/NixOS/nixpkgs",
+                    ref: "refs/heads/nixos-unstable"
+                }, "remote ref")
+            }
+        },
+        {
+            name: "a fully qualified tag ref stays a tag",
+            run: function () {
+                cases.expectEqual(PendingUpdates.flakeRemoteRef(cases.lockText, "flake-utils"), {
+                    url: "https://github.com/numtide/flake-utils",
+                    ref: "refs/tags/v1.2.3"
+                }, "tag ref")
+            }
+        },
+        {
+            name: "no remote ref is derived when the lock cannot pin one",
+            run: function () {
+                cases.expectEqual(PendingUpdates.flakeRemoteRef(cases.lockText, "revonly"), null, "rev only")
+                cases.expectEqual(PendingUpdates.flakeRemoteRef(cases.lockText, "quickshell"), null, "non github type")
+                cases.expectEqual(PendingUpdates.flakeRemoteRef(cases.lockText, "missing"), null, "absent input")
+                cases.expectEqual(PendingUpdates.flakeRemoteRef("{ not json", "nixpkgs"), null, "malformed lock")
+            }
+        },
+        {
+            name: "git ls-remote output is reduced to the revision of the requested ref",
+            run: function () {
+                const branch = "1111111111111111111111111111111111111111\trefs/heads/main\n"
+                cases.expectEqual(PendingUpdates.parseLsRemote(branch, "refs/heads/main"), "1111111111111111111111111111111111111111", "branch")
+                const tagged = "2222222222222222222222222222222222222222\trefs/tags/v1\n3333333333333333333333333333333333333333\trefs/tags/v1^{}\n"
+                cases.expectEqual(PendingUpdates.parseLsRemote(tagged, "refs/tags/v1"), "3333333333333333333333333333333333333333", "peeled tag")
+                cases.expectEqual(PendingUpdates.parseLsRemote("", "refs/heads/main"), "", "no output")
+            }
+        },
+        {
             name: "pacman upgrades through sudo, in a terminal",
             run: function () {
                 const command = Actions.buildCommand("pacman", cases.context)
@@ -121,6 +158,15 @@ QtObject {
             }
         },
         {
+            name: "the in-shell apply script enters the flake directory and quotes it",
+            run: function () {
+                const command = Actions.buildCommand("nixFlakeUpdate", { flakePath: "/etc/nixos" })
+                cases.expectEqual(Actions.shellCommand(command), "cd /etc/nixos && nix flake update", "script")
+                const spaced = Actions.buildCommand("nixFlakeUpdate", { flakePath: "work dir" })
+                cases.expectContains(Actions.shellCommand(spaced), "cd 'work dir' &&", "quoted directory")
+            }
+        },
+        {
             name: "the flake path defaults to the current directory and an unknown action yields nothing",
             run: function () {
                 cases.expectEqual(Actions.buildCommand("nixosRebuild", {}).cwd, ".", "default working directory")
@@ -152,8 +198,27 @@ QtObject {
         }
     ]
 
+    // Shaped after the real flake.lock files on this machine (the shell's own and its dependencies):
+    // a github input carries owner, repo and an optional ref, a rev-only input has no ref, and a
+    // git input has a url instead of owner/repo.
     property string lockText: `{
   "nodes": {
+    "flake-utils": {
+      "locked": {
+        "lastModified": 1740000000,
+        "narHash": "sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "1111111111111111111111111111111111111111",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "ref": "refs/tags/v1.2.3",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1745395812,
@@ -165,13 +230,47 @@ QtObject {
       },
       "original": {
         "owner": "NixOS",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "quickshell": {
+      "locked": {
+        "lastModified": 1791448974,
+        "narHash": "sha256-lPbqsyAD5ZoGFMZ1eqAlTULfeP5Nwhy+XvOowF7BE+E=",
+        "ref": "refs/heads/master",
+        "rev": "4f508be500dea6e5732cc3d50382a0048b17e7b1",
+        "type": "git",
+        "url": "https://git.outfoxxed.me/outfoxxed/quickshell"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://git.outfoxxed.me/outfoxxed/quickshell"
+      }
+    },
+    "revonly": {
+      "locked": {
+        "lastModified": 1787906858,
+        "narHash": "sha256-YZelgEZflFNwGutX4/tIzBdbOeghJgE2oDw0uWYGxns=",
+        "owner": "soramanew",
+        "repo": "m3shapes",
+        "rev": "32ad9ce328bb77ed349b40a3be10ee9ea610b8ab",
+        "type": "github"
+      },
+      "original": {
+        "owner": "soramanew",
+        "repo": "m3shapes",
+        "rev": "32ad9ce328bb77ed349b40a3be10ee9ea610b8ab",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "flake-utils": "flake-utils",
+        "nixpkgs": "nixpkgs",
+        "quickshell": "quickshell",
+        "revonly": "revonly"
       }
     }
   },

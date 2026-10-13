@@ -6,10 +6,16 @@ import Quickshell.Io
 import Caelestia.Config
 import "../modules/updates/core/PendingUpdates.js" as PendingUpdates
 
-// Detects pending Arch updates without ever mutating the system. `pacman -Qu` and `yay -Qua` are
-// the instant, offline paths; `checkupdates` is the slower, accurate path behind the manual
-// refresh. Tool presence is probed once so a machine without pacman (the NixOS target) settles
-// quietly instead of reporting a failure for a command that was never expected to exist.
+// Detects pending updates without ever mutating the system. The path is chosen by tool presence:
+// when `nix` is installed the NixOS/home-manager path runs and the machine never reaches the
+// pacman commands; otherwise `pacman -Qu` and `yay -Qua` are the instant, offline paths and
+// `checkupdates` is the slower, accurate path behind the manual refresh. Tool presence is probed
+// once so a machine without a given tool settles quietly instead of reporting a failure for a
+// command that was never expected to exist.
+//
+// The Nix check cannot use `nix flake update --dry-run` (NixOS/nix#7227), so it compares the
+// revision `flake.lock` pins against the revision the remote advertises. It only reads and queries:
+// it never writes the flake and never runs anything privileged.
 Singleton {
     id: root
 
@@ -20,14 +26,24 @@ Singleton {
 
     readonly property int ignoredCount: official.filter(entry => entry.ignored).length
     readonly property int actionableCount: official.filter(entry => !entry.ignored).length + aur.length
-    readonly property bool hasUpdates: actionableCount > 0
+    readonly property bool hasUpdates: actionableCount > 0 || nixStale
 
     property bool toolsProbed: false
     property bool hasPacman: false
     property bool hasYay: false
     property bool hasCheckupdates: false
+    property bool hasNix: false
+    property bool hasGit: false
+    property bool hasNixosRebuild: false
+    property bool hasHomeManager: false
     property bool refreshQueued: false
     property bool busy: false
+
+    // The Nix outcome, false whenever it cannot be determined: no nix, no flake path, unreadable
+    // lock, missing git, absent input, no remote ref, or a remote query that did not succeed.
+    property bool nixStale: false
+    property string nixLockedRev: ""
+    property var nixRemote: null
 
     // The instant path: pacman first, then yay once it finishes. Kept as a guard against overlapping
     // polls and against a check that lands before the one-time presence probe has reported.
@@ -36,6 +52,10 @@ Singleton {
             return;
         if (!toolsProbed) {
             probe();
+            return;
+        }
+        if (hasNix) {
+            checkNix();
             return;
         }
         if (!hasPacman) {
@@ -58,6 +78,11 @@ Singleton {
             probe();
             return;
         }
+        if (hasNix) {
+            // Nix has no separate accurate refresh: re-running the check re-queries the remote.
+            check();
+            return;
+        }
         if (!hasCheckupdates) {
             fail("checkupdates not found");
             return;
@@ -78,6 +103,10 @@ Singleton {
         hasPacman = tools.indexOf("pacman") !== -1;
         hasYay = tools.indexOf("yay") !== -1;
         hasCheckupdates = tools.indexOf("checkupdates") !== -1;
+        hasNix = tools.indexOf("nix") !== -1;
+        hasGit = tools.indexOf("git") !== -1;
+        hasNixosRebuild = tools.indexOf("nixos-rebuild") !== -1;
+        hasHomeManager = tools.indexOf("home-manager") !== -1;
         toolsProbed = true;
         if (refreshQueued) {
             refreshQueued = false;
@@ -155,6 +184,66 @@ Singleton {
         state = "error";
     }
 
+    // The Nix path: read the lock, resolve what `nixpkgs` tracks, ask the remote for its current
+    // revision and compare. A non-zero remote exit is unknown, never stale.
+    function checkNix(): void {
+        busy = true;
+        error = "";
+        state = "checking";
+        nixStale = false;
+        const base = String(GlobalConfig.updates.flakePath ?? "");
+        if (!hasGit || base === "") {
+            finishNix();
+            return;
+        }
+        const lockPath = base.endsWith("/") ? base + "flake.lock" : base + "/flake.lock";
+        lockProc.command = ["cat", lockPath];
+        lockProc.running = true;
+    }
+
+    function lsRemoteCommand(remote): var {
+        const patterns = [remote.ref];
+        // An annotated tag is advertised as both the tag object and its peeled commit; the lock
+        // stores the commit, so the peeled ref is requested too or a tag pin would always look stale.
+        if (remote.ref.indexOf("refs/tags/") === 0)
+            patterns.push(remote.ref + "^{}");
+        return ["git", "ls-remote", remote.url].concat(patterns);
+    }
+
+    function onLockExited(exitCode): void {
+        if (exitCode !== 0) {
+            finishNix();
+            return;
+        }
+        const lockText = lockStdout.text ?? "";
+        const lockedRev = PendingUpdates.flakeLockedRev(lockText, "nixpkgs");
+        const remote = PendingUpdates.flakeRemoteRef(lockText, "nixpkgs");
+        if (lockedRev === "" || remote === null) {
+            finishNix();
+            return;
+        }
+        nixLockedRev = lockedRev;
+        nixRemote = remote;
+        remoteProc.command = lsRemoteCommand(remote);
+        remoteProc.running = true;
+    }
+
+    function onNixRemoteExited(exitCode): void {
+        if (exitCode !== 0) {
+            finishNix();
+            return;
+        }
+        const remoteRev = PendingUpdates.parseLsRemote(remoteStdout.text ?? "", nixRemote ? nixRemote.ref : "");
+        nixStale = PendingUpdates.flakeIsStale(nixLockedRev, remoteRev);
+        finishNix();
+    }
+
+    function finishNix(): void {
+        busy = false;
+        error = "";
+        state = hasUpdates ? "updates" : "none";
+    }
+
     Component.onCompleted: root.check()
 
     Timer {
@@ -169,7 +258,7 @@ Singleton {
     Process {
         id: presenceProc
 
-        command: ["sh", "-c", "for tool in pacman yay checkupdates; do command -v \"$tool\" >/dev/null 2>&1 && echo \"$tool\"; done"]
+        command: ["sh", "-c", "for tool in pacman yay checkupdates nix nixos-rebuild home-manager git; do command -v \"$tool\" >/dev/null 2>&1 && echo \"$tool\"; done"]
         stdout: StdioCollector {
             id: presenceStdout
         }
@@ -208,5 +297,25 @@ Singleton {
         }
         stderr: StdioCollector {}
         onExited: code => root.onCheckupdatesExited(code)
+    }
+
+    Process {
+        id: lockProc
+
+        stdout: StdioCollector {
+            id: lockStdout
+        }
+        stderr: StdioCollector {}
+        onExited: code => root.onLockExited(code)
+    }
+
+    Process {
+        id: remoteProc
+
+        stdout: StdioCollector {
+            id: remoteStdout
+        }
+        stderr: StdioCollector {}
+        onExited: code => root.onNixRemoteExited(code)
     }
 }

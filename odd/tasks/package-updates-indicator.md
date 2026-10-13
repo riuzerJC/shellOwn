@@ -109,17 +109,29 @@ harness and owns the exit code.
       Commit: `feat(updates): add the updates popout`
       Verified: the parent read the whole component and the registration diff, reproduced the 14/14
       harness and a clean lint, and audited the apply flow. See L15.
-- [ ] T8 — Nix branch end to end: the flake path detection itself (the locked revision from
+- [x] T8 — Nix branch end to end: the flake path detection itself (the locked revision from
       `flake.lock` compared against the remote revision, since `nix flake update --dry-run` does not
-      exist), `nix flake update` in-shell, rebuild through the terminal. It must also exercise the
-      popout's in-shell apply branch and `inShellScript`, which T7 could not cover because that branch
-      is unreachable from an Arch-only target list. Validated by the user on their NixOS machine,
-      because `nix` is absent here. S5. Route: `gentle-ai-worker` plus user validation.
-      Commit: `feat(updates): support NixOS and home-manager flake updates`
+      exist), `nix flake update` in-shell, rebuild through the terminal. It also closed T7's in-shell
+      gap by extracting `Actions.shellCommand` instead of executing anything. Validated by the user on
+      their NixOS machine, because `nix` is absent here. S5. Route: `gentle-ai-worker`, verification
+      reproduced by the parent. Commit: `feat(updates): support NixOS and home-manager flake updates`
+      Verified: harness 19 of 19, lint clean, every "unknown never stale" exit read in the service, and
+      the Arch path re-probed after the change with identical numbers to T5. See L18.
+- [ ] T10 — Sequence the apply steps, a defect found while verifying T8. `applyUpdates()` fires every
+      target with `Quickshell.execDetached`, which does not wait, so two steps run at once: `pacman`
+      and `yay` would fight over the pacman database lock, and `nix flake update` would race the
+      rebuild that must see the updated lock. Fix: build an ordered plan and run it as one sequence —
+      a single terminal for the Arch chain, and for Nix a `Process` for the in-shell `nix flake
+      update` whose exit launches the rebuild, stopping the sequence when a step fails. S1, S6, S7.
+      Route: `gentle-ai-worker`. Commit: `fix(updates): sequence the apply steps instead of racing them`
 - [ ] T9 — README section for detection, the hybrid elevation model and the Nix requirement, with
-      the manual evidence recorded here; keep the new QML free of added
-      `qml-lint-conventions.py` violations. S1-S7. Route: inline.
-      Commit: `docs(updates): document detection, elevation and Nix support`
+      the manual evidence recorded here. It must also state the two caveats that need the user: that a
+      `shell.json` which pins `bar.entries` has to gain `{"id": "updates", "enabled": true}` by hand,
+      and that the installed plugin has to be rebuilt for `GlobalConfig.updates` to exist. It also
+      notes that installing `nix` on an Arch machine switches detection to the Nix path exclusively,
+      and that a flake input pinned to a tag stored as a bare ref stays "unknown" rather than risk a
+      wrong answer. Keep the new QML free of added `qml-lint-conventions.py` violations. S1-S7.
+      Route: inline. Commit: `docs(updates): document detection, elevation and Nix support`
 
 ## Log
 
@@ -264,3 +276,32 @@ L17. T6 verification, and a correction to the probe shape prescribed for it. The
     qualifications are therefore necessary, not redundant.
     Still unverified, and left to the user's manual check: the full bar loading at runtime and the actual
     visual placement in the running bar.
+
+L18. T8 verification by the parent: harness grew from 14 to 19 cases and all pass (reproduced); lint
+    clean on all five touched files (reproduced); the pure `flakeRemoteRef`, `parseLsRemote` and
+    `shellCommand` read line by line; and every exit of the Nix path checked against the rule that an
+    unknown answer is never stale (no git, no flakePath, `cat` failure, unreadable lock, absent
+    `nixpkgs` input, no ref, non-zero `git ls-remote`) all end in `nixStale = false`. Two deviations
+    from the brief were justified by evidence and accepted: an annotated tag is advertised twice, so
+    the service also asks for `<ref>^{}` and `parseLsRemote` prefers the peeled revision (otherwise a
+    tag pin would look permanently stale), and a lock that stores a tag as a bare ref cannot be told
+    apart from a branch, so it degrades to "unknown" instead of answering wrongly. The parent also
+    re-probed the Arch path, because the brief's blanket "never execute pacman/yay" made the worker
+    avoid re-exercising it after changing `check()` and the presence probe: the numbers came back
+    identical to T5 with `nixStale=false`, so there is no regression. Lesson for future briefs: a
+    blanket prohibition on executing a command also blocks the read-only detection that a regression
+    check needs; say "never run an apply action" instead.
+
+L19. Defect found during T8 verification, in T7's apply flow and in the design this document pinned for
+    it. `applyUpdates()` launches every target with `Quickshell.execDetached`, which returns
+    immediately, so the steps are concurrent rather than ordered. Two concrete failure modes: with both
+    `pacman` and `yay` as targets — which is the normal state after a `checkupdates` refresh, where
+    official actionable updates exist — two terminals start at once and the second blocks or fails on
+    the pacman database lock; and for Nix, `nix flake update` races `sudo nixos-rebuild switch --flake .`,
+    so the rebuild can run against the lock it was supposed to replace. Neither was caught by the T7 or
+    T8 verification because both checked argv equality, and argv equality cannot see execution order.
+    T10 fixes it.
+    Open product question for the user, not a blocker for T10: `yay -Syu` already upgrades the official
+    repositories as well as the AUR, so chaining `sudo pacman -Syu && yay -Syu` is redundant. T10 keeps
+    both, in order, because those are the commands S5 and S6 name; dropping the pacman step when AUR
+    updates exist is the user's call.

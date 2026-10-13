@@ -76,6 +76,20 @@ function resolveTerminal(configured, environment) {
     return "foot"
 }
 
+// The shell script that runs a non-interactive, unprivileged action in the current shell, entering
+// the working directory first. It is the in-shell counterpart of `terminalCommand` and shares the
+// same quoting; it stays pure so the self test can pin the exact text instead of executing it (L16).
+function shellCommand(command) {
+    const parts = []
+    if (command.cwd)
+        parts.push("cd " + shellQuote(command.cwd))
+    const quoted = []
+    for (let i = 0; i < command.argv.length; ++i)
+        quoted.push(shellQuote(command.argv[i]))
+    parts.push(quoted.join(" "))
+    return parts.join(" && ")
+}
+
 // The argv that opens a terminal on one command, entering the working directory first when there is
 // one, and holding the window open after it finishes so the log can be read (S7).
 function terminalCommand(terminal, argv, cwd, hold) {

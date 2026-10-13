@@ -73,3 +73,51 @@ function flakeIsStale(lockedRev, remoteRev) {
         return false
     return lockedRev !== remoteRev
 }
+
+// The remote a flake input tracks, derived from the `original` block of `flake.lock`. Only a github
+// input with an owner, a repo and a ref can be compared: an input pinned by `rev` alone has nothing
+// to follow, and a `git` input carries a url instead of an owner/repo pair. The returned `ref` is
+// fully qualified, because that is what `git ls-remote` wants: a bare name is a branch, while a ref
+// the input already qualified (`refs/tags/...`) is kept, which is the only signal a lock file gives
+// for a tag.
+function flakeRemoteRef(lockText, inputName) {
+    let lock
+    try {
+        lock = JSON.parse(text(lockText))
+    } catch (e) {
+        return null
+    }
+    const node = lock && lock.nodes ? lock.nodes[inputName] : undefined
+    const original = node ? node.original : undefined
+    if (!original || original.type !== "github")
+        return null
+    const owner = original.owner
+    const repo = original.repo
+    const ref = original.ref
+    if (typeof owner !== "string" || owner === "" || typeof repo !== "string" || repo === "" || typeof ref !== "string" || ref === "")
+        return null
+    return {
+        url: "https://github.com/" + owner + "/" + repo,
+        ref: ref.indexOf("refs/") === 0 ? ref : "refs/heads/" + ref
+    }
+}
+
+// The revision `git ls-remote <url> <ref>` reported for one ref, or an empty string when the remote
+// did not advertise it. An annotated tag is advertised twice: `<ref>` is the tag object and
+// `<ref>^{}` is the commit it points at, and the lock stores the commit, so the peeled line wins
+// when it is present.
+function parseLsRemote(output, ref) {
+    const lines = text(output).split("\n")
+    let peeled = ""
+    let direct = ""
+    for (let i = 0; i < lines.length; ++i) {
+        const match = /^([0-9a-fA-F]{40,64})[ \t]+(\S+)$/.exec(lines[i].trim())
+        if (!match)
+            continue
+        if (match[2] === ref + "^{}")
+            peeled = match[1]
+        else if (match[2] === ref)
+            direct = match[1]
+    }
+    return peeled !== "" ? peeled : direct
+}
