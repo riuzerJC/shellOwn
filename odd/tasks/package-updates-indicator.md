@@ -92,9 +92,14 @@ harness and owns the exit code.
       Commit: `feat(updates): add the update detection service`
       Verified: the parent reproduced the delivered probe values against the real commands on this
       machine, plus the security audit and the exit-code handling. See L13 and L14.
-- [ ] T6 — `modules/bar/components/Updates.qml` plus its `DelegateChoice roleValue: "updates"` in
+- [x] T6 — `modules/bar/components/Updates.qml` plus its `DelegateChoice roleValue: "updates"` in
       `modules/bar/Bar.qml`: renders only when updates are pending and occupies no space otherwise.
-      S2. Route: `gentle-ai-worker`. Commit: `feat(updates): add the conditional bar indicator`
+      S2. Route: `gentle-ai-worker`, verification reproduced by the parent.
+      Commit: `feat(updates): add the conditional bar indicator`
+      Verified: lint clean, both visibility gates read `Services.Updates.hasUpdates`, and the parent's
+      windowed probe read `indicator=true` with `hasUpdates=true`. See L17, which also corrects the
+      probe shape that produced a misleading `visible=false`. Not verified here: the full bar loading at
+      runtime and the visual placement, which need the user's eyes.
 - [x] T7 — `modules/bar/popouts/Updates.qml` (name `"updates"`), registered in
       `modules/bar/popouts/Content.qml`: lists pending packages as name and from -> to in two groups,
       marks ignored entries, offers the manual `checkupdates` refresh, renders checking/empty/error
@@ -239,3 +244,23 @@ L16. Gap handed to T8: the popout's in-shell apply branch (`needsTerminal === fa
     `nix flake update`) calls `inShellScript`, and neither it nor that path is covered by the harness,
     because the target list on an Arch-only machine can only produce `pacman` and `yay`. T8 must
     exercise it, and it is the only task that can.
+
+L17. T6 verification, and a correction to the probe shape prescribed for it. The delivered probe printed
+    `visible=false` while `Updates.hasUpdates` was true, which would mean the indicator never appears.
+    Settled by evidence rather than by accepting the explanation: the QtQuick type metadata shows
+    `Item.visible` has `read: "isVisible"`, so it returns EFFECTIVE visibility, which folds in the
+    window. A parentless, windowless item therefore cannot report true once its setter has run. The
+    parent then measured both contexts in one probe run:
+      no window:   constantTrue=true  indicator=false  parent=null
+      in a window: constantTrue=true  indicator=true
+    The windowed reading is the one that matters and it is true, so the binding drives the indicator in
+    the context the bar puts it in. Warning for future probes: a constant `visible: true` is NOT a valid
+    control here, because true is already the default, so the setter early-returns and effective
+    visibility is never recomputed; it can read true in the same context where a bound item reads false.
+    Measure the component where it is meant to live, and treat a windowless reading as meaningless.
+    Also confirmed by reading the imports of `modules/bar/Bar.qml`: it already does `import "components"`
+    unqualified and `import qs.services` unqualified, so the bare name `Updates` denotes BOTH the new
+    component and the service singleton. The `BarComponents.Updates` and `Services.Updates`
+    qualifications are therefore necessary, not redundant.
+    Still unverified, and left to the user's manual check: the full bar loading at runtime and the actual
+    visual placement in the running bar.

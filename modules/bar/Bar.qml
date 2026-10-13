@@ -9,6 +9,8 @@ import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.services
+import qs.services as Services
+import qs.modules.bar.components as BarComponents
 
 ColumnLayout {
     id: root
@@ -168,6 +170,19 @@ ColumnLayout {
                 delegate: EntryWrapper {
                     StatusIcons {
                         objectName: "taskbarStatusIcons"
+                    }
+                }
+            }
+            DelegateChoice {
+                roleValue: "updates"
+                delegate: EntryWrapper {
+                    // An invisible layout item is dropped from the bar layout together with its
+                    // spacing, so a hidden indicator leaves no gap between its neighbours.
+                    visible: Services.Updates.hasUpdates
+
+                    BarComponents.Updates {
+                        objectName: "taskbarUpdates"
+                        bar: root
                     }
                 }
             }
