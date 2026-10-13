@@ -60,9 +60,10 @@ harness and owns the exit code.
 
 ## Tasks
 
-- [x] T1 — Self-test harness: `scripts/updates-selftest.qml` prints one `ok`/`not ok` line per case
-      and `scripts/updates-selftest.py` launches it through `quickshell -p` and exits non-zero when
-      any case fails. Cases live in `scripts/updates-cases.qml`. S3-S5. Route: inline.
+- [x] T1 — Self-test harness: the entry `modules/updates/selftest.qml` prints one `ok`/`not ok` line
+      per case, `modules/updates/selftest-cases.qml` holds the cases, and
+      `scripts/updates-selftest.py` launches the entry through `quickshell -p` and exits non-zero
+      when any case fails. S3-S5. Route: inline.
       Commit: `test(updates): add a quickshell self-test harness`
 - [ ] T2 — Pure parsers in `modules/updates/core/PendingUpdates.js` (`.pragma library`): parse
       `pacman -Qu`, `checkupdates` and `yay -Qua` into `[{name, from, to, ignored}]`, plus the
@@ -147,3 +148,9 @@ L7. Parser decision made before implementing T2: the trailing bracket in `pacman
 the ignored marker whatever its text, because `[ignorado]` is localized and any literal match would
 break under another locale. A future non-ignored bracket in that position would under-count
 actionable updates, which is the safe direction, and the yay parser ignores the bracket entirely.
+
+L8. quickshell sandboxes relative imports to the config root, which is the directory of the entry
+    file: an entry under `scripts/` cannot reach `modules/` and resolves to `qrc:/qs-blackhole`. The
+    entry and its cases therefore live inside the module tree they test
+    (`modules/updates/selftest.qml` and `selftest-cases.qml`, importing `core/PendingUpdates.js`
+    downward), and only the runner that owns the exit code stays in `scripts/`.
