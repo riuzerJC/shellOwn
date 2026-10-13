@@ -65,10 +65,11 @@ harness and owns the exit code.
       `scripts/updates-selftest.py` launches the entry through `quickshell -p` and exits non-zero
       when any case fails. S3-S5. Route: inline.
       Commit: `test(updates): add a quickshell self-test harness`
-- [ ] T2 — Pure parsers in `modules/updates/core/PendingUpdates.js` (`.pragma library`): parse
+- [x] T2 — Pure parsers in `modules/updates/core/PendingUpdates.js` (`.pragma library`): parse
       `pacman -Qu`, `checkupdates` and `yay -Qua` into `[{name, from, to, ignored}]`, plus the
       `flake.lock` staleness comparison. RED first through the T1 harness against the S4 evidence
-      fixtures. S3, S4, S5. Route: `gentle-ai-worker`.
+      fixtures. S3, S4, S5. Route: inline (the parent already held the fixtures and the harness, so a
+      worker would have cost more than the work).
       Commit: `feat(updates): parse pending updates from pacman, checkupdates and yay`
 - [ ] T3 — Pure command builder `modules/updates/core/Actions.js`: `buildCommand(action, ctx)`
       returns the exact argv for the pacman/yay/nix-flake-update/rebuild actions and states whether
