@@ -95,15 +95,22 @@ harness and owns the exit code.
 - [ ] T6 — `modules/bar/components/Updates.qml` plus its `DelegateChoice roleValue: "updates"` in
       `modules/bar/Bar.qml`: renders only when updates are pending and occupies no space otherwise.
       S2. Route: `gentle-ai-worker`. Commit: `feat(updates): add the conditional bar indicator`
-- [ ] T7 — `modules/bar/popouts/Updates*.qml`: lists pending packages as name, from -> to, marks
-      ignored entries, offers the apply action through the terminal, offers the manual `checkupdates`
-      refresh, and renders checking/empty/error states. S1, S3, S6, S7. Route: `gentle-ai-worker`.
+- [x] T7 — `modules/bar/popouts/Updates.qml` (name `"updates"`), registered in
+      `modules/bar/popouts/Content.qml`: lists pending packages as name and from -> to in two groups,
+      marks ignored entries, offers the manual `checkupdates` refresh, renders checking/empty/error
+      states, and applies only through an explicit two-step confirmation that lists the exact
+      commands. Also added the pure `Actions.resolveTerminal`. S1, S3, S6, S7. Route:
+      `gentle-ai-worker`, verification reproduced by the parent.
       Commit: `feat(updates): add the updates popout`
+      Verified: the parent read the whole component and the registration diff, reproduced the 14/14
+      harness and a clean lint, and audited the apply flow. See L15.
 - [ ] T8 — Nix branch end to end: the flake path detection itself (the locked revision from
       `flake.lock` compared against the remote revision, since `nix flake update --dry-run` does not
-      exist), `nix flake update` in-shell, rebuild through the terminal. Validated by the user on
-      their NixOS machine, because `nix` is absent here. S5. Route: `gentle-ai-worker` plus user
-      validation. Commit: `feat(updates): support NixOS and home-manager flake updates`
+      exist), `nix flake update` in-shell, rebuild through the terminal. It must also exercise the
+      popout's in-shell apply branch and `inShellScript`, which T7 could not cover because that branch
+      is unreachable from an Arch-only target list. Validated by the user on their NixOS machine,
+      because `nix` is absent here. S5. Route: `gentle-ai-worker` plus user validation.
+      Commit: `feat(updates): support NixOS and home-manager flake updates`
 - [ ] T9 — README section for detection, the hybrid elevation model and the Nix requirement, with
       the manual evidence recorded here; keep the new QML free of added
       `qml-lint-conventions.py` violations. S1-S7. Route: inline.
@@ -217,3 +224,18 @@ L14. The offscreen command prescribed for T5 verification was wrong and is now r
     resolves a Config without `updates` did NOT reproduce: a probe importing both `qs.services` and
     `Caelestia.Config` printed `checkInterval=1800`, so `Caelestia.Config` is its own freshly built
     module and no core plugin rebuild is required.
+
+L15. T7 verification reproduced by the parent, not taken from the report. Harness: 14 of 14 passing
+    (case 14 pins `resolveTerminal` precedence: configured, then environment, then `foot`, and also
+    undefined arguments). Lint: clean for every touched file. Apply-flow audit on the whole component:
+    `execDetached` appears only inside `applyUpdates()`, `applyUpdates()` is reachable only from the
+    Apply button inside the confirmation panel, and the panel prints the exact argv from
+    `Actions.buildCommand`, so the user reads what is going to run before it runs. Nothing privileged
+    is spawned by the popout itself: `pacman` is wrapped in a terminal, where the sudo prompt lives.
+    The AUR entries appear as a normal entry: no per-package management was added, which keeps S1's
+    update-first scope.
+
+L16. Gap handed to T8: the popout's in-shell apply branch (`needsTerminal === false`, which is
+    `nix flake update`) calls `inShellScript`, and neither it nor that path is covered by the harness,
+    because the target list on an Arch-only machine can only produce `pacman` and `yay`. T8 must
+    exercise it, and it is the only task that can.

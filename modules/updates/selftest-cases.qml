@@ -140,6 +140,15 @@ QtObject {
                 const quick = Actions.terminalCommand("foot", ["yay", "-Syu"], "", false)
                 cases.expectTrue(quick[quick.length - 1].indexOf("read ") === -1, "no hold when not asked")
             }
+        },
+        {
+            name: "the terminal resolves from config, then the environment, then the default",
+            run: function () {
+                cases.expectEqual(Actions.resolveTerminal("kitty", "foot"), "kitty", "configured wins")
+                cases.expectEqual(Actions.resolveTerminal("", "alacritty"), "alacritty", "environment second")
+                cases.expectEqual(Actions.resolveTerminal("", ""), "foot", "default last")
+                cases.expectEqual(Actions.resolveTerminal(undefined, undefined), "foot", "absent values")
+            }
         }
     ]
 

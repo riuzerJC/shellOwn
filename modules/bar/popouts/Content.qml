@@ -7,6 +7,7 @@ import Quickshell.Services.SystemTray
 import Caelestia.Config
 import qs.components
 import qs.services
+import qs.modules.bar.popouts as BarPopouts
 
 Item {
     id: root
@@ -105,6 +106,13 @@ Item {
         Popout {
             name: "battery"
             sourceComponent: Battery {}
+        }
+
+        // `Updates` is also a qs.services singleton, so the popout is reached through the module
+        // namespace to keep the two apart.
+        Popout {
+            name: "updates"
+            sourceComponent: BarPopouts.Updates {}
         }
 
         Popout {

@@ -65,6 +65,17 @@ function shellQuote(value) {
     return SHELL_SAFE.test(text) ? text : "'" + text.replace(/'/g, "'\\''") + "'"
 }
 
+// The terminal to open, in order of preference: the configured one, then the value the session
+// exposes through the environment, then a conservative default. Pure, so the popout does not have to
+// embed the fallback chain and the self test can pin it down.
+function resolveTerminal(configured, environment) {
+    if (typeof configured === "string" && configured !== "")
+        return configured
+    if (typeof environment === "string" && environment !== "")
+        return environment
+    return "foot"
+}
+
 // The argv that opens a terminal on one command, entering the working directory first when there is
 // one, and holding the window open after it finishes so the log can be read (S7).
 function terminalCommand(terminal, argv, cwd, hold) {
