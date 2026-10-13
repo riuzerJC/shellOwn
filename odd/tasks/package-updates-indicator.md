@@ -71,10 +71,11 @@ harness and owns the exit code.
       fixtures. S3, S4, S5. Route: inline (the parent already held the fixtures and the harness, so a
       worker would have cost more than the work).
       Commit: `feat(updates): parse pending updates from pacman, checkupdates and yay`
-- [ ] T3 — Pure command builder `modules/updates/core/Actions.js`: `buildCommand(action, ctx)`
-      returns the exact argv for the pacman/yay/nix-flake-update/rebuild actions and states whether
-      it needs a terminal. Tested by argv equality, never executed. S6, S7. Route:
-      `gentle-ai-worker`. Commit: `feat(updates): build the apply commands as verified argv`
+- [x] T3 — Pure command builder `modules/updates/core/Actions.js`: `buildCommand(action, ctx)`
+      returns the exact argv for the pacman/yay/nix-flake-update/rebuild actions plus the working
+      directory they need, and states whether they need a terminal. Tested by argv equality, never
+      executed. S6, S7. Route: inline (same reason as T2).
+      Commit: `feat(updates): build the apply commands as verified argv`
 - [ ] T4 — Config: new top-level `updates` section (`CONFIG_SUBOBJECT` in
       `plugin/src/Caelestia/Config/rootnodes.hpp` plus its attached getter, mirroring `services`) with
       checkInterval, flakePath and terminal, and a default `{id: "updates"}` entry in
@@ -155,3 +156,11 @@ L8. quickshell sandboxes relative imports to the config root, which is the direc
     entry and its cases therefore live inside the module tree they test
     (`modules/updates/selftest.qml` and `selftest-cases.qml`, importing `core/PendingUpdates.js`
     downward), and only the runner that owns the exit code stays in `scripts/`.
+
+L9. Command-shape decision for T3: the Nix actions keep the literal forms from S5 (`nix flake
+    update` and `--flake .`) and carry the configured flake directory as their working directory
+    instead of rewriting the path into `--flake <dir>`, so the shell runs exactly the commands the
+    user already runs. The terminal wrapper re-enters that directory itself, so the shape does not
+    depend on the spawner honouring a working directory. `yay` is never wrapped in sudo because it
+    refuses to build as root and raises its own prompt, and `nix flake update` stays in the shell
+    because it needs no privileges.
