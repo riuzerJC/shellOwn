@@ -76,14 +76,19 @@ harness and owns the exit code.
       directory they need, and states whether they need a terminal. Tested by argv equality, never
       executed. S6, S7. Route: inline (same reason as T2).
       Commit: `d1970086` `feat(updates): build the apply commands as verified argv`
-- [ ] T4 — Config: new top-level `updates` section (`CONFIG_SUBOBJECT` in
+- [x] T4 — Config: new top-level `updates` section (`CONFIG_SUBOBJECT` in
       `plugin/src/Caelestia/Config/rootnodes.hpp` plus its attached getter, mirroring `services`) with
       checkInterval, flakePath and terminal, and a default `{id: "updates"}` entry in
-      `barconfig.hpp`. S2, S6. Route: `gentle-ai-worker`.
+      `barconfig.hpp`. S2, S6. Route: `gentle-ai-worker`, then corrected by the parent after
+      verification rejected the delivery (see L10).
       Commit: `feat(updates): add the updates config section`
-- [ ] T5 — `services/Updates.qml` singleton: picks the Arch or Nix detection path from tool
-      presence, exposes a state (idle/checking/none/updates/error), polls on the interval, and
-      offers a manual `refresh()` that runs `checkupdates`. S1, S3, S5. Route: `gentle-ai-worker`.
+      Verified: clang-format passes on every touched C++ file, and a runtime probe reads
+      `GlobalConfig.updates.checkInterval=1800 flakePath='' terminal=''` and the default `updates`
+      entry in `bar.entries` under a virgin config. See L10 and L11.
+- [ ] T5 — `services/Updates.qml` singleton: exposes a state (idle/checking/none/updates/error),
+      polls on `checkInterval`, detects the Arch path only (`pacman -Qu` plus `yay -Qua`), and offers
+      a manual `refresh()` that runs `checkupdates`. The Nix detection path is T8, per L12. S1, S3,
+      S4. Route: `gentle-ai-worker`.
       Commit: `feat(updates): add the update detection service`
 - [ ] T6 — `modules/bar/components/Updates.qml` plus its `DelegateChoice roleValue: "updates"` in
       `modules/bar/Bar.qml`: renders only when updates are pending and occupies no space otherwise.
@@ -92,10 +97,11 @@ harness and owns the exit code.
       ignored entries, offers the apply action through the terminal, offers the manual `checkupdates`
       refresh, and renders checking/empty/error states. S1, S3, S6, S7. Route: `gentle-ai-worker`.
       Commit: `feat(updates): add the updates popout`
-- [ ] T8 — Nix branch end to end: flake-path detection, `nix flake update` in-shell, rebuild through
-      the terminal, and the dry-run absence handled per S5. Validated by the user on their NixOS
-      machine, because `nix` is absent here. S5. Route: `gentle-ai-worker` plus user validation.
-      Commit: `feat(updates): support NixOS and home-manager flake updates`
+- [ ] T8 — Nix branch end to end: the flake path detection itself (the locked revision from
+      `flake.lock` compared against the remote revision, since `nix flake update --dry-run` does not
+      exist), `nix flake update` in-shell, rebuild through the terminal. Validated by the user on
+      their NixOS machine, because `nix` is absent here. S5. Route: `gentle-ai-worker` plus user
+      validation. Commit: `feat(updates): support NixOS and home-manager flake updates`
 - [ ] T9 — README section for detection, the hybrid elevation model and the Nix requirement, with
       the manual evidence recorded here; keep the new QML free of added
       `qml-lint-conventions.py` violations. S1-S7. Route: inline.
@@ -164,3 +170,29 @@ L9. Command-shape decision for T3: the Nix actions keep the literal forms from S
     depend on the spawner honouring a working directory. `yay` is never wrapped in sudo because it
     refuses to build as root and raises its own prompt, and `nix flake update` stays in the shell
     because it needs no privileges.
+
+L10. T4 delivery rejected on first review, then corrected. The worker reported a green build twice,
+    but a green build was not enough: it appended `#include "updatesconfig.hpp"` after
+    `#include "utilitiesconfig.hpp"`, which breaks the repo's format gate. `.clang-format` uses
+    `IncludeBlocks: Regroup` and `SortIncludes: CaseSensitive`, so the violation is reported at the
+    first line of the regrouped block rather than at the added line. Proven by comparing
+    `git show HEAD:<path> | clang-format --dry-run --Werror --assume-filename=<path>` (exit 0) with
+    the working tree (exit 1), using the untouched `serviceconfig.hpp` as a control to confirm the
+    local clang-format is a valid gate. Correct order is `tokens.hpp`, `updatesconfig.hpp`,
+    `userpaths.hpp`, `utilitiesconfig.hpp`. The fork has CI disabled, so nothing else would have
+    caught it.
+
+L11. The default bar entry is correct in code but inert on this machine. Runtime probe, with
+    `QML2_IMPORT_PATH=$PWD/build/qml` and `QT_QPA_PLATFORM=offscreen`:
+      with the user's config:  bar.entries ends `...statusIcons:true,power:true`
+      with an isolated `XDG_CONFIG_HOME` inside the repo: `...statusIcons:true,updates:true,power:true`
+    The shell does not materialise a config file by itself (no JSON was written to the isolated
+    directory), so the difference proves `~/.config/caelestia/shell.json` pins `bar.entries` and
+    overrides the code default. Consequence for S2: the user must add
+    `{"id": "updates", "enabled": true}` to that list, and T9 has to document it. The same probe
+    also proved the QML read path works at runtime: `checkInterval=1800 flakePath='' terminal=''`.
+
+L12. Task boundary adjusted after L10/L11: T5 owns the state machine, the polling interval, the
+    manual `checkupdates` refresh and the Arch detection only. The Nix detection path moves into T8,
+    which already owned the Nix branch end to end, because it needs its own decision (comparing the
+    locked revision against the remote one) and its own external validation.

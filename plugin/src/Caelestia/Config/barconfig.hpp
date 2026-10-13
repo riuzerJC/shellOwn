@@ -135,6 +135,7 @@ class BarConfig : public settings::ObjectNode {
             LIST_ENTRY(tray, true),
             LIST_ENTRY(clock, true),
             LIST_ENTRY(statusIcons, true),
+            LIST_ENTRY(updates, true),
             LIST_ENTRY(power, true),
         }))
     CONFIG_PROPERTY(QStringList, excludedScreens, {})
