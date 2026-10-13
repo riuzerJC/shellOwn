@@ -243,6 +243,21 @@ QtObject {
                 const quick = Actions.terminalScript("foot", script, false)
                 cases.expectTrue(quick[quick.length - 1].indexOf("read ") === -1, "no hold when not asked")
             }
+        },
+        {
+            // Coverage for the escaping branch the independent review found untested: only a space was
+            // exercised before, so the single-quote escape and the metacharacters it defends against
+            // rested on inspection alone.
+            name: "a value carrying shell metacharacters is quoted and survives the round trip",
+            run: function () {
+                cases.expectEqual(Actions.shellQuote("it's"), "'it'\\''s'", "single quote escaped")
+                cases.expectEqual(Actions.shellQuote("a;b"), "'a;b'", "semicolon quoted")
+                cases.expectEqual(Actions.shellQuote("a$b"), "'a$b'", "dollar quoted")
+                cases.expectEqual(Actions.shellQuote("a`b"), "'a`b'", "backtick quoted")
+                cases.expectEqual(Actions.shellQuote("plain-name_1.2"), "plain-name_1.2", "safe characters left alone")
+                const wrapper = Actions.terminalCommand("foot", ["echo", "it's"], "", false)
+                cases.expectContains(wrapper[wrapper.length - 1], "'it'\\''s'", "terminal keeps the escaping")
+            }
         }
     ]
 

@@ -29,6 +29,9 @@ Item {
     readonly property var plan: Actions.applyPlan(root.targets, { flakePath: GlobalConfig.updates.flakePath })
     property var pendingSteps: []
     property bool confirming
+    // True from the moment the user confirms until the sequence can no longer be re-entered, so a
+    // second click while `nix flake update` is still running cannot start a second rebuild.
+    property bool applying: false
 
     function buildTargets(): var {
         const actions = [];
@@ -80,17 +83,23 @@ Item {
     // Runs the ordered plan the popout built through the pure `Actions.applyPlan`. Reached only from
     // the Apply button in the confirmation panel, never from a binding or on load.
     function applyUpdates(): void {
+        if (root.applying)
+            return;
         root.confirming = false;
         root.runPlan(root.plan);
     }
 
     function runPlan(plan): void {
-        if (plan.length === 0)
+        if (plan.length === 0 || root.applying)
             return;
+        root.applying = true;
         if (!plan[0].needsTerminal) {
             // No privileges and no interaction needed: run it in the shell and wait for it before the
             // next step (S6). A non-zero exit stops the sequence instead of letting a rebuild race the
-            // lock the update was meant to replace (L19).
+            // lock the update was meant to replace (L19). Only `exitCode` is checked on purpose: a
+            // process killed by a signal reports the signal number here (measured: `kill -TERM` yields
+            // 15), so this test already covers the crash case, while `QProcess::ExitStatus` is not
+            // exposed to QML at all.
             root.pendingSteps = plan.slice(1);
             inShellStep.command = ["sh", "-c", Actions.shellCommand(plan[0])];
             inShellStep.running = true;
@@ -100,6 +109,8 @@ Item {
     }
 
     function runTerminalSteps(plan): void {
+        // The sequence is over from here: the terminal owns it, and nothing follows it.
+        root.applying = false;
         if (plan.length === 0)
             return;
         // Every step is privileged or interactive, so chain them into one terminal in order (S6, S7):
@@ -117,6 +128,7 @@ Item {
         onExited: (exitCode, exitStatus) => { // qmllint disable signal-handler-parameters
             const steps = root.pendingSteps;
             root.pendingSteps = [];
+            root.applying = false;
             if (exitCode !== 0)
                 return;
             root.runTerminalSteps(steps);
@@ -296,6 +308,7 @@ Item {
             visible: !root.confirming && root.targets.length > 0
             Layout.fillWidth: true
             icon: "system_update_alt"
+            disabled: root.applying
             // TRANSLATORS: opens a confirmation listing the exact commands before anything runs
             text: Tr.tr("Apply updates...")
             onClicked: root.confirming = true
@@ -331,7 +344,9 @@ Item {
                         required property var modelData
 
                         Layout.fillWidth: true
-                        text: "$ " + modelData.argv.join(" ")
+                        // The preview is the exact shell command, working directory and quoting
+                        // included, produced by the same pure helper the run uses.
+                        text: "$ " + Actions.shellCommand(modelData)
                         color: Colours.palette.m3onSurfaceVariant
                         font: Tokens.font.body.small
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere

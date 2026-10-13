@@ -136,6 +136,11 @@ harness and owns the exit code.
       and that a flake input pinned to a tag stored as a bare ref stays "unknown" rather than risk a
       wrong answer. Keep the new QML free of added `qml-lint-conventions.py` violations. S1-S7.
       Route: inline. Commit: `docs(updates): document detection, elevation and Nix support`
+- [x] T11 — Independent verification of the whole diff, required because the change builds shell
+      commands and alters a shared default. Route: `gentle-ai-verify`, findings dispositioned by the
+      parent. Commit: `fix(updates): close the findings from the independent review`
+      Verdict: all five questions confirmed against the code, no high or medium finding. Three low
+      findings fixed, one refuted by measurement, two recorded. See L22.
 
 ## Log
 
@@ -341,3 +346,42 @@ L21. Evidence recorded for the feature. Every figure below was produced on this 
     real eyes, and the Nix path end to end on their NixOS machine, where `nix` actually exists. The two
     manual steps from L11 and L14 also stay theirs: adding the `bar.entries` entry, and rebuilding or
     installing the plugin so the configuration section exists in the running session.
+
+L22. Independent verification (T11) and its disposition. `gentle-ai-verify` read `git diff main..HEAD`
+    and checked all five questions against the code rather than against this document: the shell
+    construction surface (no output-derived value reaches a shell, `flakePath` is quoted at both
+    sinks, and `terminal` is safe because `execDetached` runs QProcess without a shell), purely
+    additive shared behaviour (all 18 files insert-only, no existing default, property or
+    registration altered), the apply sequencing (rebuild gated on a clean exit, Arch in one terminal,
+    displayed order equal to executed order, and `applyUpdates` with exactly one caller), the
+    unknown-never-stale rule with every exit enumerated, and load safety, including the `Updates` name
+    collision, which is safe under Qt's rule that a module import outranks a directory import. No high
+    or medium finding.
+    Disposition of the nine low and informational findings:
+      - FIXED, real: the confirmation printed only `argv`, so the working directory that execution
+        prepends was invisible. It now prints `Actions.shellCommand(step)`, the same pure helper the
+        run uses, so what is displayed is what runs.
+      - FIXED, real: there was no reentrancy guard. Reopening the popout while `nix flake update` was
+        still running and confirming again could start a second sequence. An `applying` flag now
+        guards `applyUpdates` and `runPlan`, and disables the button until the sequence is over.
+      - FIXED, coverage: the single-quote branch of `shellQuote` was untested, as were the
+        metacharacters it defends against. Case 25 feeds `'`, `;`, `$` and a backtick through
+        `shellQuote` and through `terminalCommand`. This is coverage for existing behaviour rather than
+        test-first: the function was already correct and the case passed on its first run.
+      - REFUTED by measurement: the claim that gating on `exitCode` alone leaves a gap for a process
+        killed by a signal. A probe running real processes showed that `Process.NormalExit` is
+        `undefined` in QML, so the obvious "fix" would have made the gate permanently false and the
+        rebuild unreachable, the very failure it was meant to prevent, while a `kill -TERM` child
+        reports `exitCode = 15`, which the existing test already blocks. The code keeps
+        `exitCode !== 0` and now records why.
+      - RECORDED, not fixed: the Nix continuation lives on the popout, so unloading the popout during
+        `nix flake update` skips the rebuild. It is not an out-of-order or double path, and only a
+        shell reload mid-operation reaches it.
+      - RECORDED and documented: the terminal wrapper hardcodes `-e`, so a configured terminal that
+        does not accept it opens without running the command. The README now states that requirement.
+      - The remaining informational items needed no change: the intended default shift for an unpinned
+        `bar.entries`, property ordering that is not strictly alphabetical, and an imprecise phrase
+        that was in the delegating brief rather than in the README.
+    The three fixes are verified by the harness at 25 cases, by the linter, and by a probe that forces
+    `confirming = true` so the new preview binding evaluates. They were not put through a second
+    independent review; they add no shell construction and change no shared default.
