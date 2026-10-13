@@ -1141,6 +1141,71 @@ Example `~/.config/caelestia/services-panel.json`:
 }
 ```
 
+### Updates
+
+A bar entry that appears only when something is pending, and applies it on request. It is
+update-first: installing, removing or searching individual packages is out of scope.
+
+- The entry sits between the status icons and the power button, and disappears when nothing is
+  pending, so a hidden indicator leaves no gap in the bar.
+- Clicking it opens a panel that lists the pending packages as `name from -> to`, with the official
+  repositories and the AUR grouped separately.
+- Packages ignored in `pacman.conf` are listed and marked `ignored`, and are never counted as
+  actionable.
+
+Detection:
+
+- On start and on every poll it runs `pacman -Qu`: instant and offline, but only as fresh as your last
+  database sync. `yay -Qua` covers the AUR.
+- **Refresh now** runs `checkupdates` from `pacman-contrib`. It downloads a copy of the databases, so
+  it needs network and is slower, but it reflects the real repositories. When your last sync is old
+  the two disagree, and the instant check is the one that under-reports.
+- When `nix` is installed, detection uses the Nix path **instead of** the pacman one. It compares the
+  revision `flake.lock` pins for `nixpkgs` against the revision the remote advertises, because
+  `nix flake update --dry-run` does not exist. Every way of not knowing the answer — no `git`, no
+  readable lock, an input with no `rev` to follow, a failed remote query — counts as "not stale", so
+  an unknown is never reported as an update. A flake input pinned to a tag that the lock stores as a
+  bare ref cannot be told apart from a branch, and stays unknown rather than risk a wrong answer.
+
+Applying is deliberate and visible:
+
+- Nothing applies on its own. `Apply updates...` opens a confirmation that prints the exact commands
+  before any of them runs.
+- Steps run in order and stop at the first failure.
+- `nix flake update` runs in the shell, and the rebuild starts only if it exits successfully.
+- Privileged or interactive commands — `pacman`, `yay`, the rebuilds — open in a terminal, where the
+  `sudo` prompt and the full log live. The Arch steps share **one** terminal, so there is never more
+  than one pacman transaction running. Configure it with `terminal`; it falls back to `$TERMINAL` and
+  then to `foot`.
+
+Configuration lives in the `updates` section of `~/.config/caelestia/shell.json`:
+
+```json
+{
+    "updates": {
+        "checkInterval": 1800,
+        "flakePath": "/etc/nixos",
+        "terminal": "foot"
+    }
+}
+```
+
+`checkInterval` is in seconds and defaults to 1800, or 30 minutes. `flakePath` is the directory
+holding the flake and is used only by the Nix path.
+
+**Two things are needed before the indicator can appear:**
+
+1. If your configuration already contains a `bar.entries` list, that list replaces the built-in
+   default, so the default is not enough — add the entry yourself:
+
+   ```json
+   { "id": "updates", "enabled": true }
+   ```
+
+2. The shell reads this configuration through its plugin, so a plugin built before the `updates`
+   section existed does not know it, and the feature stays inert. Rebuild and install the plugin, or
+   run the shell against the freshly built module path.
+
 ### Home Manager Module
 
 For NixOS users, a Home Manager module is also available.

@@ -324,3 +324,20 @@ L20. T10 verification by the parent. Harness grew from 19 to 24 cases, all passi
     entries are ignored and only the AUR group contributes a target.
     Note: the local `qmllint` is a shim that exits 255 without diagnostics, so it is not a usable gate
     here and the static-route probe replaced it.
+
+L21. Evidence recorded for the feature. Every figure below was produced on this machine, and the
+    delegated pieces were reproduced by the parent rather than accepted from a report:
+      detection, Arch path:  `state=updates official=2 aur=17 ignoredCount=2 actionableCount=17 nixStale=false`
+      config read path:      `GlobalConfig.updates.checkInterval=1800 flakePath='' terminal=''`
+      default bar entry:     a virgin config yields `...statusIcons:true,updates:true,power:true`, and a
+                             `shell.json` that pins `bar.entries` yields the same list without `updates`
+      indicator gate:        windowed probe `indicator=true` with `hasUpdates=true`
+      popout:                `rows=21` (2 headers, 2 official, 17 AUR), `terminal=foot`, content loaded
+      apply plan:            `targets=yay plan=yay terminal=foot`; the Arch chain is
+                             `sudo pacman -Syu && yay -Syu` in ONE terminal; the Nix plan is
+                             `nixFlakeUpdate` then `nixosRebuild`, the rebuild gated on exit 0
+      harness:               24 cases, all passing
+    Deliberately NOT claimed, and left to the user: the rendering of the bar entry and the popout with
+    real eyes, and the Nix path end to end on their NixOS machine, where `nix` actually exists. The two
+    manual steps from L11 and L14 also stay theirs: adding the `bar.entries` entry, and rebuilding or
+    installing the plugin so the configuration section exists in the running session.
