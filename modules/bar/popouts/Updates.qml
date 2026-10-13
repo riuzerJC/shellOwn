@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components
@@ -23,6 +24,10 @@ Item {
     readonly property int maxListHeight: 320
     readonly property var targets: root.buildTargets()
     readonly property var rows: root.buildRows()
+    // The ordered plan the confirmation shows and the apply runs. Built through the pure
+    // `Actions.applyPlan`, so the order that reaches the shell is the order the user confirmed.
+    readonly property var plan: Actions.applyPlan(root.targets, { flakePath: GlobalConfig.updates.flakePath })
+    property var pendingSteps: []
     property bool confirming
 
     function buildTargets(): var {
@@ -72,30 +77,51 @@ Item {
         return rows;
     }
 
-    function commandPreview(action): string {
-        const command = Actions.buildCommand(action, { flakePath: GlobalConfig.updates.flakePath });
-        return command ? command.argv.join(" ") : "";
+    // Runs the ordered plan the popout built through the pure `Actions.applyPlan`. Reached only from
+    // the Apply button in the confirmation panel, never from a binding or on load.
+    function applyUpdates(): void {
+        root.confirming = false;
+        root.runPlan(root.plan);
     }
 
-    function applyUpdates(): void {
-        const flakePath = GlobalConfig.updates.flakePath;
-        for (let i = 0; i < root.targets.length; ++i) {
-            const command = Actions.buildCommand(root.targets[i], { flakePath: flakePath });
-            if (!command)
-                continue;
-            if (command.needsTerminal)
-                // Privileged or interactive: a terminal keeps the confirmation prompt and the log
-                // visible instead of running silently (S6, S7).
-                Quickshell.execDetached(Actions.terminalCommand(root.terminal, command.argv, command.cwd, true));
-            else
-                // No privileges and no interaction needed: run it in the shell (S6).
-                Quickshell.execDetached(["sh", "-c", Actions.shellCommand(command)]);
+    function runPlan(plan): void {
+        if (plan.length === 0)
+            return;
+        if (!plan[0].needsTerminal) {
+            // No privileges and no interaction needed: run it in the shell and wait for it before the
+            // next step (S6). A non-zero exit stops the sequence instead of letting a rebuild race the
+            // lock the update was meant to replace (L19).
+            root.pendingSteps = plan.slice(1);
+            inShellStep.command = ["sh", "-c", Actions.shellCommand(plan[0])];
+            inShellStep.running = true;
+            return;
         }
-        root.confirming = false;
+        root.runTerminalSteps(plan);
+    }
+
+    function runTerminalSteps(plan): void {
+        if (plan.length === 0)
+            return;
+        // Every step is privileged or interactive, so chain them into one terminal in order (S6, S7):
+        // one window, the whole log visible, and never two pacman transactions at once (L19).
+        Quickshell.execDetached(Actions.terminalScript(root.terminal, Actions.chainCommands(plan), true));
     }
 
     implicitWidth: Tokens.sizes.bar.audioWidth
     implicitHeight: layout.implicitHeight
+
+    Process {
+        id: inShellStep
+
+        // The in-shell step finished: only a clean exit launches the terminal rebuild (L19).
+        onExited: (exitCode, exitStatus) => { // qmllint disable signal-handler-parameters
+            const steps = root.pendingSteps;
+            root.pendingSteps = [];
+            if (exitCode !== 0)
+                return;
+            root.runTerminalSteps(steps);
+        }
+    }
 
     ColumnLayout {
         id: layout
@@ -299,13 +325,13 @@ Item {
                 }
 
                 Repeater {
-                    model: root.targets
+                    model: root.plan
 
                     StyledText {
-                        required property string modelData
+                        required property var modelData
 
                         Layout.fillWidth: true
-                        text: "$ " + root.commandPreview(modelData)
+                        text: "$ " + modelData.argv.join(" ")
                         color: Colours.palette.m3onSurfaceVariant
                         font: Tokens.font.body.small
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -314,7 +340,7 @@ Item {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: Tr.tr("Each command opens in a terminal so the log stays visible")
+                    text: Tr.tr("Privileged commands open in a terminal so the log stays visible")
                     color: Colours.palette.m3outline
                     font: Tokens.font.body.small
                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere

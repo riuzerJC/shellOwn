@@ -90,6 +90,39 @@ function shellCommand(command) {
     return parts.join(" && ")
 }
 
+// The shell script that runs several built commands in order, entering each command's own working
+// directory and stopping at the first failure. Each step goes through `shellCommand`, so quoting lives
+// in one place and `cd` failures abort the chain too.
+function chainCommands(commands) {
+    const parts = []
+    for (let i = 0; i < commands.length; ++i) {
+        if (commands[i])
+            parts.push(shellCommand(commands[i]))
+    }
+    return parts.join(" && ")
+}
+
+// Turn an ordered list of target ids into an ordered plan of `{action, argv, cwd, needsTerminal}`
+// steps, dropping unknown actions. The popout builds its plan through this instead of computing
+// commands itself, so the order that reaches the shell is the order the user confirmed (L19).
+function applyPlan(targets, context) {
+    const plan = []
+    if (!targets)
+        return plan
+    for (let i = 0; i < targets.length; ++i) {
+        const command = buildCommand(targets[i], context)
+        if (!command)
+            continue
+        plan.push({
+            action: targets[i],
+            argv: command.argv,
+            cwd: command.cwd,
+            needsTerminal: command.needsTerminal
+        })
+    }
+    return plan
+}
+
 // The argv that opens a terminal on one command, entering the working directory first when there is
 // one, and holding the window open after it finishes so the log can be read (S7).
 function terminalCommand(terminal, argv, cwd, hold) {
@@ -99,8 +132,21 @@ function terminalCommand(terminal, argv, cwd, hold) {
     const quoted = []
     for (let i = 0; i < argv.length; ++i)
         quoted.push(shellQuote(argv[i]))
-    let script = (steps.length > 0 ? steps.join(" && ") + " && " : "") + quoted.join(" ")
+    const script = (steps.length > 0 ? steps.join(" && ") + " && " : "") + quoted.join(" ")
+    return terminalInvocation(terminal, script, hold)
+}
+
+// Wrap an already-built shell script (for example a `chainCommands` of several steps) in the same
+// terminal invocation `terminalCommand` produces, hold tail included. The Arch chain opens exactly
+// one terminal this way without restating the hold logic.
+function terminalScript(terminal, script, hold) {
+    return terminalInvocation(terminal, script, hold)
+}
+
+// The single place the hold tail is appended, shared by `terminalCommand` and `terminalScript`.
+function terminalInvocation(terminal, script, hold) {
+    let body = script
     if (hold)
-        script += "; printf '\\n[exit %s]\\n' $?; read _"
-    return [terminal, "-e", "sh", "-c", script]
+        body += "; printf '\\n[exit %s]\\n' $?; read _"
+    return [terminal, "-e", "sh", "-c", body]
 }

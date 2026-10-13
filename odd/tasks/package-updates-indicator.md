@@ -117,13 +117,17 @@ harness and owns the exit code.
       reproduced by the parent. Commit: `feat(updates): support NixOS and home-manager flake updates`
       Verified: harness 19 of 19, lint clean, every "unknown never stale" exit read in the service, and
       the Arch path re-probed after the change with identical numbers to T5. See L18.
-- [ ] T10 — Sequence the apply steps, a defect found while verifying T8. `applyUpdates()` fires every
-      target with `Quickshell.execDetached`, which does not wait, so two steps run at once: `pacman`
+- [x] T10 — Sequence the apply steps, a defect found while verifying T8. `applyUpdates()` fired every
+      target with `Quickshell.execDetached`, which does not wait, so two steps ran at once: `pacman`
       and `yay` would fight over the pacman database lock, and `nix flake update` would race the
-      rebuild that must see the updated lock. Fix: build an ordered plan and run it as one sequence —
-      a single terminal for the Arch chain, and for Nix a `Process` for the in-shell `nix flake
-      update` whose exit launches the rebuild, stopping the sequence when a step fails. S1, S6, S7.
-      Route: `gentle-ai-worker`. Commit: `fix(updates): sequence the apply steps instead of racing them`
+      rebuild that must see the updated lock. Fixed by building an ordered plan and running it as one
+      sequence — a single terminal for the Arch chain, and for Nix a `Process` for the in-shell
+      `nix flake update` whose exit launches the rebuild, stopping the sequence when a step fails.
+      S1, S6, S7. Route: `gentle-ai-worker`, verification reproduced by the parent.
+      Commit: `fix(updates): sequence the apply steps instead of racing them`
+      Verified: harness 19 to 24 cases all passing, lint clean, the sequencing read as control flow
+      (the rebuild is unreachable unless `nix flake update` exits 0), and the popout loaded through
+      the real static module route with `targets=yay plan=yay terminal=foot`. See L20.
 - [ ] T9 — README section for detection, the hybrid elevation model and the Nix requirement, with
       the manual evidence recorded here. It must also state the two caveats that need the user: that a
       `shell.json` which pins `bar.entries` has to gain `{"id": "updates", "enabled": true}` by hand,
@@ -305,3 +309,18 @@ L19. Defect found during T8 verification, in T7's apply flow and in the design t
     repositories as well as the AUR, so chaining `sudo pacman -Syu && yay -Syu` is redundant. T10 keeps
     both, in order, because those are the commands S5 and S6 name; dropping the pacman step when AUR
     updates exist is the user's call.
+
+L20. T10 verification by the parent. Harness grew from 19 to 24 cases, all passing (reproduced), and
+    lint is clean on all three touched files (reproduced). The new pure functions were read line by
+    line, and the extracted `terminalInvocation` removed the duplicated hold tail that T7's review had
+    flagged. The sequencing was read as control flow: `runPlan` hands a terminal-free first step to a
+    `Process`, `onExited` returns early on any non-zero exit, and only a clean exit reaches
+    `runTerminalSteps`, so the rebuild cannot run against a lock that failed to update. The Arch plan
+    has no terminal-free step, so it goes straight to one `terminalScript` invocation holding
+    `chainCommands`: one window, the whole log in one place, and one pacman transaction at a time. The
+    popout's load was reproduced through the real static route `import qs.modules.bar.popouts` with
+    `BarPopouts.Updates {}`, the same route `Content.qml` uses, and it built `targets=yay plan=yay
+    terminal=foot state=updates`, which is what this machine should produce because both official
+    entries are ignored and only the AUR group contributes a target.
+    Note: the local `qmllint` is a shim that exits 255 without diagnostics, so it is not a usable gate
+    here and the static-route probe replaced it.

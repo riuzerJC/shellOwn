@@ -195,6 +195,54 @@ QtObject {
                 cases.expectEqual(Actions.resolveTerminal("", ""), "foot", "default last")
                 cases.expectEqual(Actions.resolveTerminal(undefined, undefined), "foot", "absent values")
             }
+        },
+        {
+            name: "the apply plan keeps the Arch steps in order",
+            run: function () {
+                const plan = Actions.applyPlan(["pacman", "yay"], cases.context)
+                cases.expectEqual(plan.map(function (step) { return step.action }), ["pacman", "yay"], "action order")
+                cases.expectEqual(plan.map(function (step) { return step.argv.join(" ") }), ["sudo pacman -Syu", "yay -Syu"], "argv order")
+            }
+        },
+        {
+            name: "the apply plan keeps nix flake update before exactly one rebuild",
+            run: function () {
+                const plan = Actions.applyPlan(["nixFlakeUpdate", "nixosRebuild"], cases.context)
+                cases.expectEqual(plan.length, 2, "step count")
+                cases.expectEqual(plan[0].action, "nixFlakeUpdate", "first step")
+                cases.expectEqual(plan[1].action, "nixosRebuild", "second step")
+                cases.expectEqual(plan[0].needsTerminal, false, "flake update stays in-shell")
+                cases.expectEqual(plan[1].needsTerminal, true, "rebuild needs a terminal")
+            }
+        },
+        {
+            name: "the apply plan drops unknown actions and keeps the known order",
+            run: function () {
+                const plan = Actions.applyPlan(["bogus", "pacman", "constructor", "yay"], cases.context)
+                cases.expectEqual(plan.map(function (step) { return step.action }), ["pacman", "yay"], "known actions only")
+            }
+        },
+        {
+            name: "chainCommands runs the steps in order and stops at the first failure",
+            run: function () {
+                const plan = Actions.applyPlan(["pacman", "yay"], cases.context)
+                cases.expectEqual(Actions.chainCommands(plan), "sudo pacman -Syu && yay -Syu", "chained script")
+                const nix = Actions.applyPlan(["nixFlakeUpdate", "nixosRebuild"], cases.context)
+                cases.expectContains(Actions.chainCommands(nix), "cd /etc/nixos && nix flake update && cd /etc/nixos && sudo nixos-rebuild switch --flake .", "per-step working directory")
+            }
+        },
+        {
+            name: "a built script is wrapped in the same terminal hold tail",
+            run: function () {
+                const script = Actions.chainCommands(Actions.applyPlan(["pacman", "yay"], cases.context))
+                const wrapper = Actions.terminalScript("foot", script, true)
+                cases.expectEqual(wrapper[0], "foot", "terminal")
+                const body = wrapper[wrapper.length - 1]
+                cases.expectContains(body, "sudo pacman -Syu && yay -Syu", "chained commands kept")
+                cases.expectContains(body, "read ", "hold tail")
+                const quick = Actions.terminalScript("foot", script, false)
+                cases.expectTrue(quick[quick.length - 1].indexOf("read ") === -1, "no hold when not asked")
+            }
         }
     ]
 
