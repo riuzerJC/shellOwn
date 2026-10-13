@@ -85,11 +85,13 @@ harness and owns the exit code.
       Verified: clang-format passes on every touched C++ file, and a runtime probe reads
       `GlobalConfig.updates.checkInterval=1800 flakePath='' terminal=''` and the default `updates`
       entry in `bar.entries` under a virgin config. See L10 and L11.
-- [ ] T5 — `services/Updates.qml` singleton: exposes a state (idle/checking/none/updates/error),
+- [x] T5 — `services/Updates.qml` singleton: exposes a state (idle/checking/none/updates/error),
       polls on `checkInterval`, detects the Arch path only (`pacman -Qu` plus `yay -Qua`), and offers
       a manual `refresh()` that runs `checkupdates`. The Nix detection path is T8, per L12. S1, S3,
-      S4. Route: `gentle-ai-worker`.
+      S4. Route: `gentle-ai-worker`, verification reproduced by the parent.
       Commit: `feat(updates): add the update detection service`
+      Verified: the parent reproduced the delivered probe values against the real commands on this
+      machine, plus the security audit and the exit-code handling. See L13 and L14.
 - [ ] T6 — `modules/bar/components/Updates.qml` plus its `DelegateChoice roleValue: "updates"` in
       `modules/bar/Bar.qml`: renders only when updates are pending and occupies no space otherwise.
       S2. Route: `gentle-ai-worker`. Commit: `feat(updates): add the conditional bar indicator`
@@ -196,3 +198,22 @@ L12. Task boundary adjusted after L10/L11: T5 owns the state machine, the pollin
     manual `checkupdates` refresh and the Arch detection only. The Nix detection path moves into T8,
     which already owned the Nix branch end to end, because it needs its own decision (comparing the
     locked revision against the remote one) and its own external validation.
+
+L13. T5 verification reproduced independently, not taken from the worker's report. Reference counts
+    taken from the same machine: `pacman -Qu` returns 2 rows and `yay -Qua` returns 17. The probe run
+    by the parent printed exactly `state=updates official=2 aur=17 ignoredCount=2 actionableCount=17
+    hasUpdates=true error=''`. The refresh claim was also reproduced: `checkupdates` returns 267 rows,
+    matching the delivered `official=267` after `refresh()`. Security audit of the service: the only
+    commands present are the tool presence probe and `pacman -Qu`, `yay -Qua`, `checkupdates`, so
+    nothing privileged or mutating is reachable from detection, and a successful run whose output the
+    parser cannot read is reported as `error` rather than as "no updates".
+
+L14. The offscreen command prescribed for T5 verification was wrong and is now retracted: importing
+    `qs.services` pulls in `services/NotifData.qml:80`, a `PanelWindow`, which the offscreen platform
+    plugin cannot provide, so any probe that imports `qs.services` fails at config load no matter what
+    the feature does. Runtime probes for the service and for anything under `modules/bar` must run
+    under the real Wayland backend, and a probe that only needs `Caelestia.Config` can still use
+    offscreen. Separately, the delivered warning that a stale `build/qml/Caelestia/libcaelestiaplugin.so`
+    resolves a Config without `updates` did NOT reproduce: a probe importing both `qs.services` and
+    `Caelestia.Config` printed `checkInterval=1800`, so `Caelestia.Config` is its own freshly built
+    module and no core plugin rebuild is required.
