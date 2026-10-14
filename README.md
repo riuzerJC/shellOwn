@@ -1216,8 +1216,10 @@ holding the flake and is used only by the Nix path.
    default already contains this entry.
 
 2. The shell reads this configuration through its plugin, so a plugin built before the `updates`
-   section existed does not know it, and the feature stays inert. Rebuild and install the plugin, or
-   run the shell against the freshly built module path.
+   section existed cannot see it. The feature still works in that case: it falls back to the defaults
+   above and resolves the terminal from `$TERMINAL` or `foot`. Rebuild and install the plugin, or run
+   the shell against the freshly built module path, only when you want `checkInterval`, `flakePath` or
+   `terminal` to actually take effect.
 
 ### Home Manager Module
 

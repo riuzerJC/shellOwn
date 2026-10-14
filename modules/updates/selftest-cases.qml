@@ -258,6 +258,19 @@ QtObject {
                 const wrapper = Actions.terminalCommand("foot", ["echo", "it's"], "", false)
                 cases.expectContains(wrapper[wrapper.length - 1], "'it'\\''s'", "terminal keeps the escaping")
             }
+        },
+        {
+            // Regression guard for a runaway loop: when the config section is unavailable the binding
+            // that computed the interval threw and left the timer at its one second default, so the
+            // package managers were polled once a second.
+            name: "the poll interval falls back and can never become a busy loop",
+            run: function () {
+                cases.expectEqual(Actions.pollIntervalMs(1800), 1800000, "configured value")
+                cases.expectEqual(Actions.pollIntervalMs(undefined), 1800000, "missing value")
+                cases.expectEqual(Actions.pollIntervalMs(0), 1800000, "zero value")
+                cases.expectEqual(Actions.pollIntervalMs(-5), 1800000, "negative value")
+                cases.expectEqual(Actions.pollIntervalMs(1), 60000, "floor of one minute")
+            }
         }
     ]
 

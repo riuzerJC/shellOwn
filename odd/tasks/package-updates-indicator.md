@@ -141,6 +141,17 @@ harness and owns the exit code.
       parent. Commit: `fix(updates): close the findings from the independent review`
       Verdict: all five questions confirmed against the code, no high or medium finding. Three low
       findings fixed, one refuted by measurement, two recorded. See L22.
+- [x] T12 — Harden against a missing config section, a defect found in production use, not by any
+      review. With the installed plugin and `updates` enabled in the bar, `GlobalConfig.updates` is
+      undefined, and the timer's interval binding threw, leaving the timer at its one second default:
+      the shell polled the package managers once a second and hammered the AUR. The popout's `plan`
+      also stayed undefined, so apply silently did nothing. Fixed with a pure
+      `Actions.pollIntervalMs` (fallback 1800, floor 60), guarded reads in the service and the popout,
+      and tolerance for an absent plan, which makes the config section optional rather than required.
+      S1, S3, S6. Route: inline. Commit: `fix(updates): never let a missing config section spin the poll`
+      Verified: case 26 RED then green, harness 26 of 26, lint clean, a probe without
+      `QML2_IMPORT_PATH` printing `terminal='foot' plan=yay` with no TypeError, and ten quiet samples in
+      the live shell. See L23.
 
 ## Log
 
@@ -385,3 +396,31 @@ L22. Independent verification (T11) and its disposition. `gentle-ai-verify` read
     The three fixes are verified by the harness at 25 cases, by the linter, and by a probe that forces
     `confirming = true` so the new preview binding evaluates. They were not put through a second
     independent review; they add no shell construction and change no shared default.
+
+L23. A defect found in production use, by the user, and not by any review in this document. Their session
+    restarted, which dropped the `QML_IMPORT_PATH` they had been testing with, so the shell came back on
+    the plugin installed on 23 September while `bar.entries` still had `updates` enabled. `GlobalConfig.updates`
+    was therefore undefined, and the result was not a quiet degradation but a runaway poll loop: the
+    binding `Math.max(1, GlobalConfig.updates.checkInterval) * 1000` threw, the timer kept its one second
+    default, and the shell ran `pacman -Qu` plus `yay -Qua` once a second, hammering the AUR. Measured: a
+    child process was present in five of six one second samples, and the log carried
+    `@services/Updates.qml[253]: TypeError: Cannot read property 'checkInterval' of undefined`. The popout
+    fared no better: `terminal` and `flakePath` threw 36 times between them, `plan` stayed undefined, and
+    apply silently did nothing because `plan.length` threw as well, which is why the user's click applied
+    nothing at all.
+    Two lessons, both mine: a broken binding must never be able to turn a timer into a busy loop, and the
+    missing-config-section state was never covered because every probe in this document, and both the
+    delivered and the independent verification, ran against a freshly built plugin.
+    Fix: `Actions.pollIntervalMs(seconds)` is pure, falls back to 1800 and floors at 60, asserted by case
+    26 with RED observed first; the service reads the configured value inside a self-contained try/catch
+    binding, with no helper to get the order wrong; the popout reads `terminal` and `flakePath` through
+    guarded helpers; and `applyUpdates` and `runPlan` tolerate an absent plan. The configuration section
+    is now optional customisation rather than a hard dependency, so the Arch feature works without the
+    fresh plugin.
+    Verified: harness 26 of 26 and lint clean; a probe run WITHOUT `QML2_IMPORT_PATH`, which reproduces the
+    broken condition exactly, printed `terminal='foot' plan=yay targets=yay state=updates` and no
+    TypeError; and in the live shell the error counts froze while ten one second samples showed no `yay`
+    or `pacman` at all.
+    Checked and dismissed: the `services/Time.qml` warnings that follow a reload are unrelated to this
+    feature. The first one sits immediately after the `Configuration Loaded` at log line 63, long before
+    any edit here, and 15 of them correspond to three reloads of five warnings each.

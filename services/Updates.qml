@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia.Config
+import "../modules/updates/core/Actions.js" as Actions
 import "../modules/updates/core/PendingUpdates.js" as PendingUpdates
 
 // Detects pending updates without ever mutating the system. The path is chosen by tool presence:
@@ -27,6 +28,18 @@ Singleton {
     readonly property int ignoredCount: official.filter(entry => entry.ignored).length
     readonly property int actionableCount: official.filter(entry => !entry.ignored).length + aur.length
     readonly property bool hasUpdates: actionableCount > 0 || nixStale
+    // Read defensively and floored. `GlobalConfig.updates` does not exist when the plugin predates this
+    // section, and an unguarded binding threw, which left the timer at its one second default and
+    // polled the package managers once a second. A missing configuration must degrade, never spin.
+    readonly property int pollIntervalMs: {
+        let seconds = 0;
+        try {
+            seconds = GlobalConfig.updates.checkInterval;
+        } catch (e) {
+            seconds = 0;
+        }
+        return Actions.pollIntervalMs(seconds);
+    }
 
     property bool toolsProbed: false
     property bool hasPacman: false
@@ -250,7 +263,7 @@ Singleton {
         id: checkTimer
 
         running: true
-        interval: Math.max(1, GlobalConfig.updates.checkInterval) * 1000
+        interval: root.pollIntervalMs
         repeat: true
         onTriggered: root.check()
     }

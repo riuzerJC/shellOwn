@@ -41,6 +41,10 @@ const ACTIONS = {
 
 const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/
 
+// Politeness bounds for the automatic check.
+const DEFAULT_POLL_SECONDS = 1800
+const MIN_POLL_SECONDS = 60
+
 function flakeDir(context) {
     const configured = context ? context.flakePath : undefined
     return typeof configured === "string" && configured !== "" ? configured : "."
@@ -74,6 +78,16 @@ function resolveTerminal(configured, environment) {
     if (typeof environment === "string" && environment !== "")
         return environment
     return "foot"
+}
+
+// The poll interval in milliseconds. A missing or nonsensical configured value falls back to the
+// default, and a floor keeps a bad configuration from turning the poll into a busy loop: when the
+// config section was unavailable the binding computing the interval threw and the timer stayed at
+// its one second default, polling the package managers once a second.
+function pollIntervalMs(configuredSeconds) {
+    const usable = typeof configuredSeconds === "number" && isFinite(configuredSeconds) && configuredSeconds > 0
+    const seconds = usable ? configuredSeconds : DEFAULT_POLL_SECONDS
+    return Math.max(MIN_POLL_SECONDS, seconds) * 1000
 }
 
 // The shell script that runs a non-interactive, unprivileged action in the current shell, entering

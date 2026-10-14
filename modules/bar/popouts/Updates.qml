@@ -18,7 +18,7 @@ import "../../updates/core/Actions.js" as Actions
 Item {
     id: root
 
-    readonly property string terminal: Actions.resolveTerminal(GlobalConfig.updates.terminal, Quickshell.env("TERMINAL"))
+    readonly property string terminal: Actions.resolveTerminal(root.configuredTerminal(), Quickshell.env("TERMINAL"))
     readonly property bool checking: Updates.state === "checking"
     // Cap for the list so a stale local database (hundreds of rows) does not stretch the popout.
     readonly property int maxListHeight: 320
@@ -26,12 +26,31 @@ Item {
     readonly property var rows: root.buildRows()
     // The ordered plan the confirmation shows and the apply runs. Built through the pure
     // `Actions.applyPlan`, so the order that reaches the shell is the order the user confirmed.
-    readonly property var plan: Actions.applyPlan(root.targets, { flakePath: GlobalConfig.updates.flakePath })
+    readonly property var plan: Actions.applyPlan(root.targets, { flakePath: root.configuredFlakePath() })
     property var pendingSteps: []
     property bool confirming
     // True from the moment the user confirms until the sequence can no longer be re-entered, so a
     // second click while `nix flake update` is still running cannot start a second rebuild.
     property bool applying: false
+
+    // The two settings this popout reads are read defensively, because a plugin that predates the
+    // `updates` section leaves `GlobalConfig.updates` undefined: an unguarded binding threw, left the
+    // plan undefined and made the apply button do nothing at all.
+    function configuredTerminal() {
+        try {
+            return GlobalConfig.updates.terminal
+        } catch (e) {
+            return ""
+        }
+    }
+
+    function configuredFlakePath() {
+        try {
+            return GlobalConfig.updates.flakePath
+        } catch (e) {
+            return ""
+        }
+    }
 
     function buildTargets(): var {
         const actions = [];
@@ -83,14 +102,14 @@ Item {
     // Runs the ordered plan the popout built through the pure `Actions.applyPlan`. Reached only from
     // the Apply button in the confirmation panel, never from a binding or on load.
     function applyUpdates(): void {
-        if (root.applying)
+        if (root.applying || !root.plan || root.plan.length === 0)
             return;
         root.confirming = false;
         root.runPlan(root.plan);
     }
 
     function runPlan(plan): void {
-        if (plan.length === 0 || root.applying)
+        if (!plan || plan.length === 0 || root.applying)
             return;
         root.applying = true;
         if (!plan[0].needsTerminal) {
