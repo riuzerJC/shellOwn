@@ -424,3 +424,15 @@ L23. A defect found in production use, by the user, and not by any review in thi
     Checked and dismissed: the `services/Time.qml` warnings that follow a reload are unrelated to this
     feature. The first one sits immediately after the `Configuration Loaded` at log line 63, long before
     any edit here, and 15 of them correspond to three reloads of five warnings each.
+
+L24. Visual correction reported by the user after using the feature: hovering the bar entry drew a CIRCLE
+    where a rounded rectangle belongs, and the count read a touch large. Cause: the entry had copied the
+    icon-only hover pattern from `modules/bar/components/Power.qml`, a centred square
+    (`implicitWidth: implicitHeight`) with `radius: Tokens.rounding.full`. That is right for a single icon
+    but wrong for an entry that also carries a count: the square was about 18 px wide on a 40 px entry, so
+    the highlight did not even cover the number next to the icon. Fixed by letting the StateLayer fill the
+    entry and switching to `Tokens.rounding.small`, and by scaling the count to 0.9, which is the pattern
+    `Clock.qml` uses for its secondary text. Measured with a probe rather than judged by eye:
+    `item=39.6x24.0  hover=39.6x24.0  hoverRadius=8`, so the hover now spans the entry. Worth remembering
+    about the token scale: radii clamp to half the height, so on a 24 px entry `rounding.medium` and up all
+    render as a capsule, and `small` is the only token that still reads as a rounded rectangle.

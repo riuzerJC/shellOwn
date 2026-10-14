@@ -32,16 +32,14 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: Services.Updates.actionableCount
             color: Services.Colours.palette.m3primary
-            font: Tokens.font.body.builders.small.build()
+            font: Tokens.font.body.builders.small.scale(0.9).build()
         }
     }
 
     StateLayer {
-        anchors.fill: undefined
-        anchors.centerIn: parent
-        implicitWidth: implicitHeight
-        implicitHeight: content.implicitHeight + Tokens.padding.small
-        radius: Tokens.rounding.full
+        // The hover has to span the whole entry. The icon-only pattern from Power — a centred square
+        // with a full radius — drew a circle that did not even cover the count sitting next to the icon.
+        radius: Tokens.rounding.small
         onClicked: {
             const popouts = root.bar.popouts;
             popouts.currentName = "updates";
