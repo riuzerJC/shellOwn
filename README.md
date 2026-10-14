@@ -1204,6 +1204,14 @@ holding the flake and is used only by the Nix path.
    { "id": "updates", "enabled": true }
    ```
 
+   Add it where you actually maintain that list, because the shell ships no `shell.json` of its own and
+   has no way to append to a list you pinned. If the file is deployed for you by the caelestia dots,
+   the entry belongs in your copy of the dots: a later deployment can replace the file. Otherwise a
+   per-monitor file under `~/.config/caelestia/monitors/<name>/shell.json` is yours alone, and
+   `bar.entries` does respect per-monitor overrides, but it replaces the whole list for that monitor,
+   so the list has to be repeated there. Omitting `bar.entries` entirely is equally valid: the built-in
+   default already contains this entry.
+
 2. The shell reads this configuration through its plugin, so a plugin built before the `updates`
    section existed does not know it, and the feature stays inert. Rebuild and install the plugin, or
    run the shell against the freshly built module path.
