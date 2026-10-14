@@ -1205,8 +1205,11 @@ holding the flake and is used only by the Nix path.
    ```
 
    Add it where you actually maintain that list, because the shell ships no `shell.json` of its own and
-   has no way to append to a list you pinned. If the file is deployed for you by the caelestia dots,
-   the entry belongs in your copy of the dots: a later deployment can replace the file. Otherwise a
+   has no way to append to a list you pinned. Note also that the shell itself writes that file back
+   whenever a setting changes from its own interface, so it is the shell's state rather than a
+   read-only artifact, and an entry written there survives those rewrites. If the file is deployed for
+   you by the caelestia dots, the entry belongs in your copy of the dots: a later deployment can
+   replace the file. Otherwise a
    per-monitor file under `~/.config/caelestia/monitors/<name>/shell.json` is yours alone, and
    `bar.entries` does respect per-monitor overrides, but it replaces the whole list for that monitor,
    so the list has to be repeated there. Omitting `bar.entries` entirely is equally valid: the built-in
