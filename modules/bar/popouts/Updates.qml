@@ -19,6 +19,10 @@ Item {
     id: root
 
     readonly property string terminal: Actions.resolveTerminal(root.configuredTerminal(), Quickshell.env("TERMINAL"))
+    // The shell's own terminal wrapper. It emits the scheme's terminal sequences, written to the state
+    // directory by the CLI, before running the command: that is what makes the window look like every
+    // other terminal the shell opens instead of a bare one.
+    readonly property string terminalWrapper: Quickshell.shellDir + "/assets/wrap_term_launch.sh"
     readonly property bool checking: Updates.state === "checking"
     // Cap for the list so a stale local database (hundreds of rows) does not stretch the popout.
     readonly property int maxListHeight: 320
@@ -134,7 +138,7 @@ Item {
             return;
         // Every step is privileged or interactive, so chain them into one terminal in order (S6, S7):
         // one window, the whole log visible, and never two pacman transactions at once (L19).
-        Quickshell.execDetached(Actions.terminalScript(root.terminal, Actions.chainCommands(plan), true));
+        Quickshell.execDetached(Actions.terminalScript(root.terminal, Actions.chainCommands(plan), true, root.terminalWrapper));
     }
 
     implicitWidth: Tokens.sizes.bar.audioWidth

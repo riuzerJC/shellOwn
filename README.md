@@ -1176,8 +1176,9 @@ Applying is deliberate and visible:
 - Privileged or interactive commands — `pacman`, `yay`, the rebuilds — open in a terminal, where the
   `sudo` prompt and the full log live. The Arch steps share **one** terminal, so there is never more
   than one pacman transaction running. Configure it with `terminal`; it falls back to `$TERMINAL` and
-  then to `foot`. It is invoked as `<terminal> -e sh -c '<command>'`, so the terminal you configure has
-  to accept `-e`.
+  then to `foot`. The command goes through the shell's own `assets/wrap_term_launch.sh`, the same
+  wrapper the launcher uses, which emits the scheme's terminal sequences before running it, so the
+  window looks like every other terminal the shell opens.
 - The confirmation prints the exact shell command for each step, working directory included.
 
 Configuration lives in the `updates` section of `~/.config/caelestia/shell.json`:

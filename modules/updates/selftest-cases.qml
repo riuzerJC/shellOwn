@@ -271,6 +271,21 @@ QtObject {
                 cases.expectEqual(Actions.pollIntervalMs(-5), 1800000, "negative value")
                 cases.expectEqual(Actions.pollIntervalMs(1), 60000, "floor of one minute")
             }
+        },
+        {
+            // The shell opens terminals through its own wrapper, which emits the scheme's terminal
+            // sequences before exec'ing the command. Building the argv by hand skipped it, so the
+            // window did not look like any other terminal the shell opens.
+            name: "the terminal invocation goes through the shell wrapper",
+            run: function () {
+                const wrapped = Actions.terminalCommand("foot", ["yay", "-Syu"], "", false, "/shell/assets/wrap_term_launch.sh")
+                cases.expectEqual(wrapped.slice(0, 3), ["foot", "/shell/assets/wrap_term_launch.sh", "sh"], "wrapper before the command")
+                cases.expectEqual(wrapped[wrapped.length - 1], "yay -Syu", "command still last")
+                const chained = Actions.terminalScript("foot", "sudo pacman -Syu && yay -Syu", true, "/shell/wrap")
+                cases.expectEqual(chained.slice(0, 3), ["foot", "/shell/wrap", "sh"], "chained script wrapped too")
+                const plain = Actions.terminalCommand("foot", ["yay", "-Syu"], "", false)
+                cases.expectEqual(plain, ["foot", "sh", "-c", "yay -Syu"], "no wrapper when none is given")
+            }
         }
     ]
 

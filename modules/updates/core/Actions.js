@@ -138,8 +138,10 @@ function applyPlan(targets, context) {
 }
 
 // The argv that opens a terminal on one command, entering the working directory first when there is
-// one, and holding the window open after it finishes so the log can be read (S7).
-function terminalCommand(terminal, argv, cwd, hold) {
+// one, and holding the window open after it finishes so the log can be read (S7). `wrapper` is the
+// shell's own terminal wrapper, which emits the scheme's terminal sequences before exec'ing the
+// command: without it the window does not look like any other terminal the shell opens.
+function terminalCommand(terminal, argv, cwd, hold, wrapper) {
     const steps = []
     if (cwd)
         steps.push("cd " + shellQuote(cwd))
@@ -147,20 +149,23 @@ function terminalCommand(terminal, argv, cwd, hold) {
     for (let i = 0; i < argv.length; ++i)
         quoted.push(shellQuote(argv[i]))
     const script = (steps.length > 0 ? steps.join(" && ") + " && " : "") + quoted.join(" ")
-    return terminalInvocation(terminal, script, hold)
+    return terminalInvocation(terminal, script, hold, wrapper)
 }
 
 // Wrap an already-built shell script (for example a `chainCommands` of several steps) in the same
 // terminal invocation `terminalCommand` produces, hold tail included. The Arch chain opens exactly
 // one terminal this way without restating the hold logic.
-function terminalScript(terminal, script, hold) {
-    return terminalInvocation(terminal, script, hold)
+function terminalScript(terminal, script, hold, wrapper) {
+    return terminalInvocation(terminal, script, hold, wrapper)
 }
 
-// The single place the hold tail is appended, shared by `terminalCommand` and `terminalScript`.
-function terminalInvocation(terminal, script, hold) {
+// The single place the hold tail is appended and the wrapper inserted, shared by `terminalCommand`
+// and `terminalScript`. The wrapper is invoked as the program with `sh -c` as its arguments, which
+// is exactly how `modules/launcher/services/Apps.qml` opens a terminal for a terminal application.
+function terminalInvocation(terminal, script, hold, wrapper) {
     let body = script
     if (hold)
         body += "; printf '\\n[exit %s]\\n' $?; read _"
-    return [terminal, "-e", "sh", "-c", body]
+    const prefix = typeof wrapper === "string" && wrapper !== "" ? [wrapper] : []
+    return [terminal].concat(prefix, ["sh", "-c", body])
 }

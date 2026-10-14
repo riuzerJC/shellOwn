@@ -436,3 +436,22 @@ L24. Visual correction reported by the user after using the feature: hovering th
     `item=39.6x24.0  hover=39.6x24.0  hoverRadius=8`, so the hover now spans the entry. Worth remembering
     about the token scale: radii clamp to half the height, so on a 24 px entry `rounding.medium` and up all
     render as a capsule, and `small` is the only token that still reads as a rounded rectangle.
+
+L25. The terminal this feature opened did not look like a terminal opened anywhere else in the shell,
+    reported by the user after using it. Cause: `Actions.terminalCommand` built
+    `[<terminal>, "-e", "sh", "-c", script]` by hand and skipped the shell's own mechanism.
+    `modules/launcher/services/Apps.qml` opens a terminal application as
+    `[...GlobalConfig.general.apps.terminal, "${Quickshell.shellDir}/assets/wrap_term_launch.sh",
+    ...command]`, and that wrapper emits `~/.local/state/caelestia/sequences.txt` before exec'ing the
+    command. Those are the scheme's terminal sequences: 465 bytes on this machine, written by the CLI,
+    and read by nothing inside the shell repository. Measured that the wrapper really emits them, without
+    opening a window: `sh assets/wrap_term_launch.sh sh -c 'echo WRAPPER_OK'` produced 476 bytes.
+    Fix: `terminalCommand` and `terminalScript` take the wrapper path and `terminalInvocation` inserts it
+    as the program with `sh -c` as its arguments, while the popout passes
+    `Quickshell.shellDir + "/assets/wrap_term_launch.sh"`. Case 27 was RED first; harness now 27 of 27,
+    lint clean, and a probe printed the argv it produces:
+    `["foot","<shellDir>/assets/wrap_term_launch.sh","sh","-c","sudo pacman -Syu && yay -Syu; printf
+    '\\n[exit %s]\\n' $?; read _"]`.
+    Bonus: this drops the `-e` requirement entirely, so a configured terminal no longer has to accept it,
+    which makes finding 7 of the independent review moot, and it matches the positional form the rest of
+    the shell already uses.
